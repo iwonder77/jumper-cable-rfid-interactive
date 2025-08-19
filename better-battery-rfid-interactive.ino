@@ -27,7 +27,8 @@
 #include <MFRC522DriverI2C.h>
 #include <MFRC522Debug.h>
 
-#include "TerminalReader.h"
+#include "Battery.h"
+#include "MuxController.h"
 
 enum LEDState {
   LED_OFF,
@@ -35,286 +36,23 @@ enum LEDState {
   LED_RED
 };
 
-// ===================== CONSTANTS ====================
-// ----- I2C Addresses -----
+// ----- I2C ADDRESSES -----
 const uint8_t TCA9548A_ADDR = 0x70;
 const uint8_t RFID2_WS1850S_ADDR = 0x28;
-
-// ----- TCA9548A Channels -----
-const uint8_t NEGATIVE_TERMINAL_CHANNEL = 0;
-const uint8_t POSITIVE_TERMINAL_CHANNEL = 1;
 
 // ----- LED Test Pins -----
 const uint8_t GREEN_LED_PIN = 5;
 const uint8_t RED_LED_PIN = 6;
 
 // ----- Timing Constants -----
-const unsigned long TAG_POLL_INTERVAL = 250;     // how often to check for tags (ms)
-const unsigned long TAG_ABSENCE_TIMEOUT = 1000;  // time before considering tag removed (ms)
-const unsigned long TAG_DEBOUNCE_TIME = 100;     // debounce time for tag detection (ms)
-const uint8_t TAG_PRESENCE_THRESHOLD = 3;        // consecutive reading fails before marking absent
+const unsigned long TAG_POLL_INTERVAL = 250;  // how often to check for tags (ms)
 
-const uint8_t TAG_START_READ_PAGE = 4;
-// ====================================================
-
-// ===================== DATA STRUCTURES ====================
-struct Battery {
-  uint8_t muxAddress;
-  uint8_t id;
-  TerminalReader positive;
-  TerminalReader negative;
-  bool hasValidConfiguration() const {
-    // Both terminals must have tags in PRESENT state
-    if (positive.tagState != TAG_PRESENT || negative.tagState != TAG_PRESENT) return false;
-
-    // Both cards must have correct polarity
-    if (!positive.isCorrectPolarity || !negative.isCorrectPolarity) return false;
-
-    // Cable IDs must form valid pair
-    uint8_t posID = positive.tagData.id;
-    uint8_t negID = negative.tagData.id;
-
-    return (posID == 1 && negID == 3) || (posID == 2 && negID == 4);
-  }
-};
+// ----- HARDWARE INSTANCES -----
+MFRC522DriverI2C driver{ RFID2_WS1850S_ADDR, Wire };
+MFRC522 reader{ driver };
 
 // ----- GLOBAL BATTERY INSTANCE -----
-Battery battery = {
-  TCA9548A_ADDR,
-  1,
-  { "Positive Terminal",
-    POSITIVE_TERMINAL_CHANNEL,
-    false,
-    TAG_ABSENT,
-    0,
-    0,
-    0,
-    false,
-    {},
-    {},
-    0 },
-  { "Negative Terminal",
-    NEGATIVE_TERMINAL_CHANNEL,
-    false,
-    TAG_ABSENT,
-    0,
-    0,
-    0,
-    false,
-    {},
-    {},
-    0 },
-};
-// =========================================================
-
-
-// ========== MUX FUNCTIONS ==========
-void TCA9548A_setChannel(uint8_t channel) {
-  if (channel > 7) return;
-  Wire.beginTransmission(TCA9548A_ADDR);
-  Wire.write(1 << channel);
-  Wire.endTransmission();
-}
-
-void TCA9548A_disableChannels() {
-  Wire.beginTransmission(TCA9548A_ADDR);
-  Wire.write(0);
-  Wire.endTransmission();
-}
-
-// ========== UTILITY FUNCTIONS ==========
-uint8_t calculateChecksum(const uint8_t* data, uint8_t length) {
-  uint8_t sum = 0;
-  for (uint8_t i = 0; i < length; i++) {
-    sum ^= data[i];
-  }
-  return sum;
-}
-
-bool compareUID(byte* uid1, byte* uid2, byte length) {
-  for (byte i = 0; i < length; i++) {
-    if (uid1[i] != uid2[i]) return false;
-  }
-  return true;
-}
-
-void clearTagData(TerminalReader& terminal) {
-  terminal.isCorrectPolarity = false;
-  memset(&terminal.tagData, 0, sizeof(terminal.tagData));
-  terminal.lastUIDLength = 0;
-  memset(terminal.lastUID, 0, sizeof(terminal.lastUID));
-}
-
-// ========== RFID FUNCTIONS ==========
-
-// ========== TAG DETECTION WITH STATE MACHINE ==========
-void updateTagState(TerminalReader& terminal) {
-  if (!terminal.isReaderOK) return;
-
-  TCA9548A_setChannel(terminal.channel);
-  delay(5);
-
-  unsigned long currentTime = millis();
-  bool tagDetected = false;
-
-  // Try to detect tag without halting it
-  if (reader.PICC_IsNewCardPresent()) {
-    if (reader.PICC_ReadCardSerial()) {
-      tagDetected = true;
-
-      // Check if this is the same tag or a different one
-      bool isSameTag = (terminal.lastUIDLength == reader.uid.size) && compareUID(terminal.lastUID, reader.uid.uidByte, reader.uid.size);
-
-      // Update UID
-      memcpy(terminal.lastUID, reader.uid.uidByte, reader.uid.size);
-      terminal.lastUIDLength = reader.uid.size;
-
-      // Update timing
-      terminal.lastSeenTime = currentTime;
-      terminal.consecutiveFails = 0;
-
-      // State transitions
-      switch (terminal.tagState) {
-        case TAG_ABSENT:
-          terminal.tagState = TAG_DETECTED;
-          terminal.firstSeenTime = currentTime;
-          Serial.print(terminal.name);
-          Serial.println(": New tag detected!");
-          break;
-
-        case TAG_DETECTED:
-          // Check if enough time has passed for debouncing
-          if (currentTime - terminal.firstSeenTime > TAG_DEBOUNCE_TIME) {
-            terminal.tagState = TAG_PRESENT;
-            Serial.print(terminal.name);
-            Serial.println(": Tag confirmed present");
-            // Read the tag data when transitioning to PRESENT
-            readTagData(terminal);
-          }
-          break;
-
-        case TAG_PRESENT:
-          if (!isSameTag) {
-            // Different tag detected
-            terminal.tagState = TAG_DETECTED;
-            terminal.firstSeenTime = currentTime;
-            clearTagData(terminal);
-            Serial.print(terminal.name);
-            Serial.println(": Different tag detected!");
-          }
-          // Same tag still present - no action needed
-          break;
-
-        case TAG_REMOVED:
-          terminal.tagState = TAG_DETECTED;
-          terminal.firstSeenTime = currentTime;
-          Serial.print(terminal.name);
-          Serial.println(": Tag returned!");
-          break;
-      }
-
-      // Don't halt the tag - let it stay active
-      // We're NOT calling PICC_HaltA() here
-    }
-  }
-
-  // Handle absence detection
-  if (!tagDetected && terminal.tagState != TAG_ABSENT) {
-    terminal.consecutiveFails++;
-
-    // Use different logic based on current state
-    if (terminal.tagState == TAG_DETECTED) {
-      // Quick timeout for tags that were just detected
-      if (terminal.consecutiveFails >= 2) {
-        terminal.tagState = TAG_ABSENT;
-        clearTagData(terminal);
-        Serial.print(terminal.name);
-        Serial.println(": Tag detection failed");
-      }
-    } else if (terminal.tagState == TAG_PRESENT) {
-      // More lenient for established tags
-      if (terminal.consecutiveFails >= TAG_PRESENCE_THRESHOLD || (currentTime - terminal.lastSeenTime > TAG_ABSENCE_TIMEOUT)) {
-        terminal.tagState = TAG_REMOVED;
-        Serial.print(terminal.name);
-        Serial.println(": Tag removed!");
-      }
-    } else if (terminal.tagState == TAG_REMOVED) {
-      // Confirm removal
-      if (currentTime - terminal.lastSeenTime > TAG_ABSENCE_TIMEOUT * 2) {
-        terminal.tagState = TAG_ABSENT;
-        clearTagData(terminal);
-        Serial.print(terminal.name);
-        Serial.println(": Tag removal confirmed");
-      }
-    }
-  }
-}
-
-// ========== READ TAG DATA (only when needed) ==========
-void readTagData(TerminalReader& terminal) {
-  if (!terminal.isReaderOK || terminal.tagState != TAG_PRESENT) return;
-
-  TCA9548A_setChannel(terminal.channel);
-  delay(5);
-
-  Serial.print(terminal.name);
-  Serial.println(": Reading tag data...");
-
-  byte buffer[18];
-  byte bufferSize = sizeof(buffer);
-
-  if (reader.MIFARE_Read(TAG_START_READ_PAGE, buffer, &bufferSize) != MFRC522::StatusCode::STATUS_OK) {
-    Serial.print(terminal.name);
-    Serial.println(": Failed to read card data");
-    // Don't clear tag data - we know tag is present, just couldn't read it
-    return;
-  }
-
-  JumperCableTagData data;
-  memcpy(&data, buffer, sizeof(JumperCableTagData));
-
-  uint8_t expectedChecksum = calculateChecksum((uint8_t*)&data, sizeof(data) - 1);
-  if (expectedChecksum != data.checksum) {
-    Serial.print(terminal.name);
-    Serial.println(": Checksum error");
-    return;
-  }
-
-  terminal.tagData = data;
-
-  bool isTagPos = (strncmp(data.type, "POS", 3) == 0);
-  bool isTerminalPos = (terminal.channel == POSITIVE_TERMINAL_CHANNEL);
-  terminal.isCorrectPolarity = (isTagPos == isTerminalPos);
-
-  Serial.print(terminal.name);
-  Serial.print(": Read ");
-  Serial.print(data.type);
-  Serial.print(" cable #");
-  Serial.print(data.id);
-
-  if (!terminal.isCorrectPolarity) {
-    Serial.print(" [WRONG POLARITY!]");
-  }
-  Serial.println();
-
-  // Still don't halt - let tag remain active for continuous detection
-}
-
-// ========== POLLING FUNCTION ==========
-void pollRFIDReaders() {
-  static unsigned long lastPollTime = 0;
-  unsigned long currentTime = millis();
-
-  if (currentTime - lastPollTime < TAG_POLL_INTERVAL) {
-    return;  // Not time to poll yet
-  }
-
-  lastPollTime = currentTime;
-
-  // Update both terminals
-  updateTagState(battery.positive);
-  updateTagState(battery.negative);
-}
+Battery battery(TCA9548A_ADDR, 1);
 
 // ========== LED CONTROL ==========
 void updateLEDs() {
@@ -323,8 +61,8 @@ void updateLEDs() {
 
   // Count terminals with present tags
   uint8_t presentCount = 0;
-  if (battery.positive.tagState == TAG_PRESENT) presentCount++;
-  if (battery.negative.tagState == TAG_PRESENT) presentCount++;
+  if (battery.getPositive().getTagState() == TAG_PRESENT) presentCount++;
+  if (battery.getNegative().getTagState() == TAG_PRESENT) presentCount++;
 
   if (presentCount < 2) {
     currentState = LED_OFF;
@@ -353,40 +91,8 @@ void updateLEDs() {
         break;
     }
 
-    printConfigurationStatus();
+    battery.printStatus();
     lastState = currentState;
-  }
-}
-
-void printConfigurationStatus() {
-  Serial.println("--- Configuration Status ---");
-
-  Serial.print("Positive Terminal: ");
-  printTerminalStatus(battery.positive);
-
-  Serial.print("Negative Terminal: ");
-  printTerminalStatus(battery.negative);
-
-  Serial.println("----------------------------");
-}
-
-void printTerminalStatus(const TerminalReader& terminal) {
-  switch (terminal.tagState) {
-    case TAG_ABSENT:
-      Serial.println("No card");
-      break;
-    case TAG_DETECTED:
-      Serial.println("Detecting...");
-      break;
-    case TAG_PRESENT:
-      Serial.print(terminal.tagData.type);
-      Serial.print(" #");
-      Serial.print(terminal.tagData.id);
-      Serial.println(terminal.isCorrectPolarity ? " ✓" : " ✗ Wrong polarity");
-      break;
-    case TAG_REMOVED:
-      Serial.println("Card removed (confirming...)");
-      break;
   }
 }
 
@@ -404,15 +110,14 @@ void setup() {
   digitalWrite(RED_LED_PIN, LOW);
 
   Wire.begin();
+  reader.PCD_Init();
 
-  TCA9548A_disableChannels();
+  MuxController::disableAll(TCA9548A_ADDR);
   delay(50);
 
-  initializeReader(battery.positive);
-  delay(50);
-  initializeReader(battery.negative);
+  battery.initializeReaders(reader);
 
-  if (!battery.positive.isReaderOK && !battery.negative.isReaderOK) {
+  if (!battery.getPositive().getReaderStatus() && !battery.getNegative().getReaderStatus()) {
     Serial.println("ERROR: No readers responding! Check wiring.");
     while (1) {
       digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
@@ -420,27 +125,31 @@ void setup() {
     }
   }
 
-  if (!battery.positive.isReaderOK) {
+  if (!battery.getPositive().getReaderStatus()) {
     Serial.println("Warning: Positive Terminal reader not responding");
   }
-  if (!battery.negative.isReaderOK) {
+  if (!battery.getNegative().getReaderStatus()) {
     Serial.println("Warning: Negative Terminal reader not responding");
   }
 
   Serial.println("\n=== System Ready ===");
   Serial.println("Place jumper cable tags on terminals to test");
 
-  TCA9548A_disableChannels();
+  MuxController::disableAll(TCA9548A_ADDR);
 }
 
 // ========== MAIN LOOP ==========
 void loop() {
   // Poll RFID readers at controlled intervals
-  pollRFIDReaders();
+  static unsigned long lastPollTime = 0;
+  unsigned long currentTime = millis();
 
-  // Update LED status
+  if (currentTime - lastPollTime >= TAG_POLL_INTERVAL) {
+    // Update both terminals
+    battery.updateReaders(reader);
+    lastPollTime = currentTime;
+  }
+
   updateLEDs();
-
-  // Small delay for system stability
   delay(10);
 }

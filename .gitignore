@@ -6,3 +6,7 @@ build/
 
 # Logs
 *.log
+
+#.clangd file
+# it was used to suppress a warning with the MFRC522 library
+.clangd
