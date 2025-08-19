@@ -1,16 +1,17 @@
 /* 
 * ----------------------------------------------
-* PROJECT NAME: TCA9548A_I2C_Multiplexer 
-* Description: using Adafruit's TCA9548A I2C multiplexer to gather RFID information from two M5Stack WS1850S RFID2 readers 
+* PROJECT NAME: Better Battery Terminal Interactive w/ RFID 
+* Description: Using more organized code and better principles in OOP to create a working and smooth version of the battery terminal interactive
 *
-* Author: Isai Sanchez Date: 8-11-25 
+* Author: Isai Sanchez 
+* Date: 8-19-25 
 * Board(s) Used: Arduino Nano 
 * Libraries: 
 *   - Wire.h (I2C communication library): https://docs.arduino.cc/language-reference/en/functions/communication/wire/ 
 *   - MFRC522v2.h (Main RFID library): https://github.com/OSSLibraries/Arduino_MFRC522v2 
 *
 * Notes: 
-*   - The RFID2 readers used have a WS1850S chip rather than the MFRC522, so there are subtle differences that the library
+*   - The M5Stack RFID2 readers we're using have a WS1850S chip rather than the MFRC522, so there are subtle differences that the library
 *     doesn't play nice with, however reading the datasheet for the MFRC522 and the src code for the library seems to help and work out alright
 *       sidenote: coudln't for the life of me figure out how to download the datasheet for these RFID readers from M5Stack, 
 *       definitely will go with other options if we use RFID again
@@ -26,17 +27,12 @@
 #include <MFRC522DriverI2C.h>
 #include <MFRC522Debug.h>
 
+#include "TerminalReader.h"
+
 enum LEDState {
   LED_OFF,
   LED_GREEN,
   LED_RED
-};
-
-enum TagState {
-  TAG_ABSENT,
-  TAG_DETECTED,
-  TAG_PRESENT,
-  TAG_REMOVED
 };
 
 // ===================== CONSTANTS ====================
@@ -61,32 +57,7 @@ const uint8_t TAG_PRESENCE_THRESHOLD = 3;        // consecutive reading fails be
 const uint8_t TAG_START_READ_PAGE = 4;
 // ====================================================
 
-// ===================== HARDWARE INSTANCES ====================
-MFRC522DriverI2C driver{ RFID2_WS1850S_ADDR, Wire };  // // RFID driver and reader instance
-MFRC522 reader{ driver };
-// =============================================================
-
 // ===================== DATA STRUCTURES ====================
-struct JumperCableTagData {
-  char type[4];      // either "POS" or "NEG"
-  uint8_t id;        // 1, 2, 3, or 4 (for the 4 cable ends)
-  uint8_t checksum;  // simple validation
-};
-
-struct TerminalReader {
-  const char* name;
-  uint8_t channel;
-  bool isReaderOK;
-  TagState tagState;            // New: State machine for tag
-  unsigned long lastSeenTime;   // New: Track when tag was last detected
-  unsigned long firstSeenTime;  // New: Track when tag was first detected
-  uint8_t consecutiveFails;     // New: Count failed detection attempts
-  bool isCorrectPolarity;
-  JumperCableTagData tagData;
-  byte lastUID[10];    // New: Store UID to detect tag changes
-  byte lastUIDLength;  // New: UID length
-};
-
 struct Battery {
   uint8_t muxAddress;
   uint8_t id;
@@ -175,28 +146,6 @@ void clearTagData(TerminalReader& terminal) {
 }
 
 // ========== RFID FUNCTIONS ==========
-void initializeReader(TerminalReader& terminal) {
-  Serial.print("Initializing ");
-  Serial.print(terminal.name);
-  Serial.print(" (Channel ");
-  Serial.print(terminal.channel);
-  Serial.print(")...");
-
-  TCA9548A_setChannel(terminal.channel);
-
-  Wire.beginTransmission(RFID2_WS1850S_ADDR);
-  if (Wire.endTransmission() != 0) {
-    Serial.println("FAILED - I2C Communication ERROR");
-    terminal.isReaderOK = false;
-    return;
-  }
-
-  reader.PCD_Init();
-  delay(50);
-
-  Serial.println(" SUCCESS");
-  terminal.isReaderOK = true;
-}
 
 // ========== TAG DETECTION WITH STATE MACHINE ==========
 void updateTagState(TerminalReader& terminal) {
