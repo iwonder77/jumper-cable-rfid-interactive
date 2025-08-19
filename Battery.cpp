@@ -8,11 +8,11 @@ void Battery::initializeReaders(MFRC522 &reader) {
   Serial.println(id);
 
   // Initialize positive terminal
-  MuxController::selectChannel(muxAddr, 1);
+  MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
   positive.initialize(reader); // TerminalReader::initialize()
 
   // Initialize negative terminal
-  MuxController::selectChannel(muxAddr, 0);
+  MuxController::selectChannel(muxAddr, NEGATIVE_TERMINAL_CHANNEL);
   negative.initialize(reader); // TerminalReader::initialize()
 
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
@@ -24,14 +24,14 @@ void Battery::initializeReaders(MFRC522 &reader) {
 
 void Battery::updateReaders(MFRC522 &reader) {
   // update positive terminal
-  MuxController::selectChannel(muxAddr, 1);
+  MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
   delayMicroseconds(5);
-  positive.update(reader); // TerminalReader::initialize()
+  positive.update(reader);
 
   // update negative terminal
-  MuxController::selectChannel(muxAddr, 0);
+  MuxController::selectChannel(muxAddr, NEGATIVE_TERMINAL_CHANNEL);
   delayMicroseconds(5);
-  negative.update(reader); // TerminalReader::initialize()
+  negative.update(reader);
 }
 
 bool Battery::hasValidConfiguration() const {
@@ -48,7 +48,8 @@ bool Battery::hasValidConfiguration() const {
   uint8_t posID = positive.getTagData().id;
   uint8_t negID = negative.getTagData().id;
 
-  return (posID == 1 && negID == 3) || (posID == 2 && negID == 4);
+  return (posID == 1 && negID == 3) || (posID == 2 && negID == 4) ||
+         (posID == 2 && negID == 3) || (posID == 1 && negID == 4);
 }
 
 void Battery::printStatus() const {
