@@ -18,8 +18,8 @@ struct JumperCableTagData {
 
 class TerminalReader {
 public:
-  TerminalReader(const char *name, uint8_t channel)
-      : name(name), channel(channel) {}
+  TerminalReader(uint8_t address, const char *name, uint8_t channel)
+      : address(address), name(name), channel(channel) {}
 
   void initialize(MFRC522 &reader);
   void update(MFRC522 &reader);
@@ -33,6 +33,7 @@ public:
 
 private:
   const char *name;
+  uint8_t address;
   uint8_t channel;
   bool isReaderOK = false;
   TagState tagState = TAG_ABSENT;
@@ -58,7 +59,6 @@ private:
       3; // consecutive reading fails before marking absent
   static constexpr uint8_t TAG_START_READ_PAGE =
       4; // page # to begin reading data from in Tag
-  static constexpr uint8_t RFID2_WS1850S_ADDR = 0x28;
 };
 
 #endif
