@@ -37,7 +37,9 @@ enum LEDState {
 };
 
 // ----- I2C ADDRESSES -----
-const uint8_t TCA9548A_ADDR = 0x70;
+const uint8_t TCA9548A_6V_ADDR = 0x70;
+const uint8_t TCA9548A_12V_ADDR = 0x71;
+const uint8_t TCA9548A_16V_ADDR = 0x72;
 const uint8_t RFID2_WS1850S_ADDR = 0x28;
 
 // ----- LED Test Pins -----
@@ -51,25 +53,36 @@ const unsigned long TAG_POLL_INTERVAL = 250;  // how often to check for tags (ms
 MFRC522DriverI2C driver{ RFID2_WS1850S_ADDR, Wire };
 MFRC522 reader{ driver };
 
-// ----- GLOBAL BATTERY INSTANCE -----
-Battery battery(TCA9548A_ADDR, 1);
+// ----- GLOBAL BATTERY ARRAY INSTANCE -----
+const uint8_t NUM_BATTERIES = 3;
+Battery batteries[NUM_BATTERIES] = { { TCA9548A_6V_ADDR, 0, RFID2_WS1850S_ADDR }, { TCA9548A_12V_ADDR, 1, RFID2_WS1850S_ADDR }, { TCA9548A_16V_ADDR, 2, RFID2_WS1850S_ADDR } };
+const char* batteryNames[NUM_BATTERIES] = { "6V ", "12V", "16V" };
 
 // ========== LED CONTROL ==========
 void updateLEDs() {
   static LEDState lastState = LED_OFF;
-  LEDState currentState;
+  LEDState currentState = LED_OFF;
+  int activeBattery = -1;
 
-  // Count terminals with present tags
-  uint8_t presentCount = 0;
-  if (battery.getPositive().getTagState() == TAG_PRESENT) presentCount++;
-  if (battery.getNegative().getTagState() == TAG_PRESENT) presentCount++;
+  // Find the battery with the most complete configuration
+  for (int i = 0; i < NUM_BATTERIES; i++) {
+    bool posPresent = (batteries[i].getPositive().getTagState() == TAG_PRESENT);
+    bool negPresent = (batteries[i].getNegative().getTagState() == TAG_PRESENT);
 
-  if (presentCount < 2) {
-    currentState = LED_OFF;
-  } else if (battery.hasValidConfiguration()) {
-    currentState = LED_GREEN;
-  } else {
-    currentState = LED_RED;
+    if (posPresent && negPresent) {
+      activeBattery = i;
+      if (batteries[i].hasValidConfiguration()) {
+        currentState = LED_GREEN;
+        break;  // Found a valid one, stop looking
+      } else {
+        currentState = LED_RED;  // Both cables present but wrong config
+      }
+    } else if (posPresent || negPresent) {
+      if (currentState == LED_OFF) {  // Only set if we haven't found anything better
+        currentState = LED_RED;
+        activeBattery = i;
+      }
+    }
   }
 
   if (currentState != lastState) {
@@ -77,21 +90,27 @@ void updateLEDs() {
       case LED_OFF:
         digitalWrite(GREEN_LED_PIN, LOW);
         digitalWrite(RED_LED_PIN, LOW);
-        Serial.println("LEDs OFF - waiting for both tags");
+        Serial.println("LEDs OFF - no cables detected");
         break;
       case LED_GREEN:
         digitalWrite(GREEN_LED_PIN, HIGH);
         digitalWrite(RED_LED_PIN, LOW);
-        Serial.println("✅ Correct configuration - Green ON");
+        Serial.print("✅ ");
+        Serial.print(batteryNames[activeBattery]);
+        Serial.println(" battery ready for jumpstart!");
         break;
       case LED_RED:
         digitalWrite(GREEN_LED_PIN, LOW);
         digitalWrite(RED_LED_PIN, HIGH);
-        Serial.println("❌ Incorrect configuration - Red ON");
+        Serial.print("❌ ");
+        Serial.print(batteryNames[activeBattery]);
+        Serial.println(" battery incorrect configuration");
         break;
     }
 
-    battery.printStatus();
+    if (activeBattery >= 0) {
+      batteries[activeBattery].printStatus();
+    }
     lastState = currentState;
   }
 }
@@ -101,8 +120,7 @@ void setup() {
   Serial.begin(115200);
   while (!Serial) delay(10);
 
-  Serial.println("=== Battery RFID System v3.0 ===");
-  Serial.println("Features: Persistent tag detection with state machine");
+  Serial.println("=== Jumper Cable Interactive v2 ===");
 
   pinMode(GREEN_LED_PIN, OUTPUT);
   pinMode(RED_LED_PIN, OUTPUT);
@@ -110,46 +128,92 @@ void setup() {
   digitalWrite(RED_LED_PIN, LOW);
 
   Wire.begin();
-  reader.PCD_Init();
+  Wire.setClock(100000);
 
-  MuxController::disableAll(TCA9548A_ADDR);
-  delay(50);
+  // disable all channels
+  for (int i = 0; i < NUM_BATTERIES; i++) {
+    MuxController::disableChannel(batteries[i].getMuxAddr());
+  }
 
-  battery.initializeReaders(reader);
+  // test MUX communication one by one
+  Serial.println("\nTesting MUX communication...");
+  for (int i = 0; i < NUM_BATTERIES; i++) {
+    Wire.beginTransmission(batteries[i].getMuxAddr());
+    byte result = Wire.endTransmission();
 
-  if (!battery.getPositive().getReaderStatus() && !battery.getNegative().getReaderStatus()) {
-    Serial.println("ERROR: No readers responding! Check wiring.");
-    while (1) {
-      digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
-      delay(500);
+    Serial.print(batteryNames[i]);
+    Serial.print(" Battery MUX (0x");
+    Serial.print(batteries[i].getMuxAddr(), HEX);
+    Serial.print("): ");
+    Serial.println(result == 0 ? "OK" : "FAILED");
+  }
+
+  Serial.println("\nInitializing RFID Readers...");
+  for (int i = 0; i < NUM_BATTERIES; i++) {
+    Serial.print("\n--- ");
+    Serial.print(batteryNames[i]);
+    Serial.print(" Battery (MUX 0x");
+    Serial.print(batteries[i].getMuxAddr(), HEX);
+    Serial.println(") --- ");
+
+    batteries[i].initializeReaders(reader);
+
+    if (!batteries[i].getPositive().getReaderStatus() && !batteries[i].getNegative().getReaderStatus()) {
+      Serial.println("ERROR: No readers responding on  ");
+      Serial.print(batteryNames[i]);
+      Serial.print(" Battery! Check wiring.");
+      while (1) {
+        digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
+        delay(500);
+      }
+    }
+    if (!batteries[i].getPositive().getReaderStatus()) {
+      Serial.println("Warning: Positive Terminal reader on ");
+      Serial.print(batteryNames[i]);
+      Serial.print(" Battery not responding");
+    }
+    if (!batteries[i].getNegative().getReaderStatus()) {
+      Serial.println("Warning: Negative Terminal reader on ");
+      Serial.print(i == 0 ? "6V" : (i == 1 ? "12V" : "16V"));
+      Serial.print(" Battery not responding");
     }
   }
 
-  if (!battery.getPositive().getReaderStatus()) {
-    Serial.println("Warning: Positive Terminal reader not responding");
+  Serial.println("\n === Initialization Summary ===");
+
+  for (int i = 0; i < NUM_BATTERIES; i++) {
+    Serial.print(batteryNames[i]);
+    Serial.print(" Battery: Positive=");
+    Serial.print(batteries[i].getPositive().getReaderStatus() ? "OK" : "FAILED");
+    Serial.print(", Negative=");
+    Serial.println(batteries[i].getNegative().getReaderStatus() ? "OK" : "FAILED");
   }
-  if (!battery.getNegative().getReaderStatus()) {
-    Serial.println("Warning: Negative Terminal reader not responding");
+
+  // disable all channels
+  for (int i = 0; i < NUM_BATTERIES; i++) {
+    MuxController::disableChannel(batteries[i].getMuxAddr());
   }
 
   Serial.println("\n=== System Ready ===");
   Serial.println("Place jumper cable tags on terminals to test");
-
-  MuxController::disableAll(TCA9548A_ADDR);
 }
 
 // ========== MAIN LOOP ==========
 void loop() {
   // Poll RFID readers at controlled intervals
   static unsigned long lastPollTime = 0;
+  static int currentBattery = 0;  // Track which battery to poll
   unsigned long currentTime = millis();
 
   if (currentTime - lastPollTime >= TAG_POLL_INTERVAL) {
-    // Update both terminals
-    battery.updateReaders(reader);
+    // Poll only one battery per cycle
+    batteries[currentBattery].updateReaders(reader);
+
+    // Move to next battery
+    currentBattery = (currentBattery + 1) % NUM_BATTERIES;
     lastPollTime = currentTime;
   }
 
   updateLEDs();
-  delay(10);
+  delay(10);  // Reduced delay since we're polling less frequently
 }
