@@ -20,6 +20,6 @@ Source code for the Arduino Nano that handles RFID readings of 3 batteries (each
 
 ### Software Architecture
 
-#### Class Structure
-
-1. **TerminalReader** Class
+#### **`TerminalReader`** Class
+#### **`MuxController`** Class
+#### **`Battery`** Class
