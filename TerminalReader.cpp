@@ -2,13 +2,13 @@
 
 void TerminalReader::initialize(MFRC522 &reader) {
   // assume channel has already been set
-  Serial.print("Initializing ");
+  Serial.print("Testing ");
   Serial.print(name);
-  Serial.print(" (Channel ");
+  Serial.print(" Reader I2C Communication on Channel ");
   Serial.print(channel);
-  Serial.print(")...");
+  Serial.print(": ");
 
-  Wire.beginTransmission(RFID2_WS1850S_ADDR);
+  Wire.beginTransmission(address);
   if (Wire.endTransmission() != 0) {
     Serial.println("FAILED - I2C Communication ERROR");
     isReaderOK = false;
@@ -17,6 +17,11 @@ void TerminalReader::initialize(MFRC522 &reader) {
 
   Serial.println(" SUCCESS");
   isReaderOK = true;
+
+  // initialize
+  reader.PCD_Init();
+
+  delay(50);
 }
 
 void TerminalReader::update(MFRC522 &reader) {
@@ -27,60 +32,58 @@ void TerminalReader::update(MFRC522 &reader) {
   bool tagDetected = false;
 
   // Try to detect tag without halting it
-  if (reader.PICC_IsNewCardPresent()) {
-    if (reader.PICC_ReadCardSerial()) {
-      tagDetected = true;
+  if (reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()) {
+    tagDetected = true;
 
-      // Check if this is the same tag or a different one
-      bool isSameTag = (lastUIDLength == reader.uid.size) &&
-                       compareUID(lastUID, reader.uid.uidByte, reader.uid.size);
+    // Check if this is the same tag or a different one
+    bool isSameTag = (lastUIDLength == reader.uid.size) &&
+                     compareUID(lastUID, reader.uid.uidByte, reader.uid.size);
 
-      // Update UID
-      memcpy(lastUID, reader.uid.uidByte, reader.uid.size);
-      lastUIDLength = reader.uid.size;
+    // Update UID
+    memcpy(lastUID, reader.uid.uidByte, reader.uid.size);
+    lastUIDLength = reader.uid.size;
 
-      // Update timing
-      lastSeenTime = currentTime;
-      consecutiveFails = 0;
+    // Update timing
+    lastSeenTime = currentTime;
+    consecutiveFails = 0;
 
-      // state transitions
-      switch (tagState) {
-      case TAG_ABSENT:
-        tagState = TAG_DETECTED;
-        firstSeenTime = currentTime;
+    // state transitions
+    switch (tagState) {
+    case TAG_ABSENT:
+      tagState = TAG_DETECTED;
+      firstSeenTime = currentTime;
+      Serial.print(name);
+      Serial.println(": New tag detected!");
+      break;
+
+    case TAG_DETECTED:
+      // Check if enough time has passed for debouncing
+      if (currentTime - firstSeenTime > TAG_DEBOUNCE_TIME) {
+        tagState = TAG_PRESENT;
         Serial.print(name);
-        Serial.println(": New tag detected!");
-        break;
-
-      case TAG_DETECTED:
-        // Check if enough time has passed for debouncing
-        if (currentTime - firstSeenTime > TAG_DEBOUNCE_TIME) {
-          tagState = TAG_PRESENT;
-          Serial.print(name);
-          Serial.println(": Tag confirmed present");
-          readTagData(reader);
-        }
-        break;
-
-      case TAG_PRESENT:
-        if (!isSameTag) {
-          // different tag detected
-          tagState = TAG_DETECTED;
-          firstSeenTime = currentTime;
-          clearTagData();
-          Serial.print(name);
-          Serial.println(": Different tag detected!");
-        }
-        // otherwise same tag still present - no action needed
-        break;
-
-      case TAG_REMOVED:
-        tagState = TAG_DETECTED;
-        firstSeenTime = currentTime;
-        Serial.print(name);
-        Serial.println(": Tag returned!");
-        break;
+        Serial.println(": Tag confirmed present");
+        readTagData(reader);
       }
+      break;
+
+    case TAG_PRESENT:
+      if (!isSameTag) {
+        // different tag detected
+        tagState = TAG_DETECTED;
+        firstSeenTime = currentTime;
+        clearTagData();
+        Serial.print(name);
+        Serial.println(": Different tag detected!");
+      }
+      // otherwise same tag still present - no action needed
+      break;
+
+    case TAG_REMOVED:
+      tagState = TAG_DETECTED;
+      firstSeenTime = currentTime;
+      Serial.print(name);
+      Serial.println(": Tag returned!");
+      break;
     }
   }
 
@@ -193,6 +196,7 @@ void TerminalReader::readTagData(MFRC522 &reader) {
   /*****************
    * DON'T HALT - let tag remain active for continuous detection
    ******************/
+  reader.PCD_StopCrypto1();
 }
 
 // ========== UTILITY FUNCTIONS ==========
