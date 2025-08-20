@@ -9,11 +9,13 @@ void Battery::initializeReaders(MFRC522 &reader) {
 
   // Initialize positive terminal
   MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
-  positive.initialize(reader); // TerminalReader::initialize()
+  delay(10);
+  positive.initialize(reader);
 
   // Initialize negative terminal
   MuxController::selectChannel(muxAddr, NEGATIVE_TERMINAL_CHANNEL);
-  negative.initialize(reader); // TerminalReader::initialize()
+  delay(10);
+  negative.initialize(reader);
 
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
     Serial.print("Warning: Battery ");
@@ -25,13 +27,19 @@ void Battery::initializeReaders(MFRC522 &reader) {
 void Battery::updateReaders(MFRC522 &reader) {
   // update positive terminal
   MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
-  delayMicroseconds(5);
+  delay(10);
+  reader.PCD_Init();
+  delay(10);
   positive.update(reader);
 
   // update negative terminal
   MuxController::selectChannel(muxAddr, NEGATIVE_TERMINAL_CHANNEL);
-  delayMicroseconds(5);
+  delay(10);
+  reader.PCD_Init();
+  delay(10);
   negative.update(reader);
+
+  MuxController::disableChannel(muxAddr);
 }
 
 bool Battery::hasValidConfiguration() const {
