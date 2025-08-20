@@ -7,7 +7,7 @@
 class MuxController {
 public:
   static void selectChannel(uint8_t muxAddress, uint8_t channel);
-  static void disableAll(uint8_t muxAddress);
+  static void disableChannel(uint8_t muxAddress);
 };
 
 #endif
