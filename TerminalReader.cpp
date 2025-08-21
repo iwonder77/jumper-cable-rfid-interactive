@@ -195,6 +195,7 @@ void TerminalReader::readTagData(MFRC522 &reader) {
 
   /*****************
    * DON'T HALT - let tag remain active for continuous detection
+   * reader.PICC_HaltA();
    ******************/
   reader.PCD_StopCrypto1();
 }
