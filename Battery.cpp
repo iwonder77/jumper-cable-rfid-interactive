@@ -27,16 +27,12 @@ void Battery::initializeReaders(MFRC522 &reader) {
 void Battery::updateReaders(MFRC522 &reader) {
   // update positive terminal
   MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
-  delay(10);
-  reader.PCD_Init();
-  delay(10);
+  delay(20);
   positive.update(reader);
 
   // update negative terminal
   MuxController::selectChannel(muxAddr, NEGATIVE_TERMINAL_CHANNEL);
-  delay(10);
-  reader.PCD_Init();
-  delay(10);
+  delay(20);
   negative.update(reader);
 
   MuxController::disableChannel(muxAddr);
