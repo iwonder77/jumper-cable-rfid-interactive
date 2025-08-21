@@ -51,7 +51,7 @@ void TerminalReader::update(MFRC522 &reader) {
     switch (tagState) {
     case TAG_ABSENT:
       tagState = TAG_DETECTED;
-      firstSeenTime = currentTime;
+      firstSeenTime = currentTime; // start debounce timer
       Serial.print(name);
       Serial.println(": New tag detected!");
       break;

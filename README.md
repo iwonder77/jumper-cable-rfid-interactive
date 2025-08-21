@@ -21,5 +21,59 @@ Source code for the Arduino Nano that handles RFID readings of 3 batteries (each
 ### Software Architecture
 
 #### **`TerminalReader`** Class
+
+`update()`: The **State Machine**
+
+Four defined states:
+1. TAG_ABSENT: No tag near the reader
+2. TAG_DETECTED: Tag found but not yet confirmed (debouncing)
+3. TAG_PRESENT: Tag confirmed and data read successfully
+4. TAG_REMOVED: Tag was present but now missing (confirming removal)
+
+2 main sections:
+1. Tag Detection Logic (when a tag IS found)
+In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns true, a tag has been detected. We quickly check its UID to verify if it is a new one or the same one, and update the timing variables. We then check the previous state of the reader's tag data and use a switch statement to act accordingly.
+- TAG_ABSENT -> TAG_DETECTED: first detection of a tag, advance to "detected" state and start debounce timer
+```cpp
+case TAG_ABSENT:
+  tagState = TAG_DETECTED;
+  firstSeenTime = currentTime;  // Start debounce timer
+  Serial.println(": New tag detected!");
+```
+- TAG_DETECTED -> TAG_PRESENT: if the tag is still there after 100ms (debounce time) it's confirmed as real and present, continue to reading its data
+```cpp
+case TAG_DETECTED:
+  if (currentTime - firstSeenTime > TAG_DEBOUNCE_TIME) {
+    tagState = TAG_PRESENT;
+    Serial.println(": Tag confirmed present");
+    readTagData(reader);  // Actually read the tag's data
+  }
+```
+- TAG_PRESENT (Same Tag): if it's the same tag, do nothing, if it is a different tag, go back to TAG_DETECTED to debounce this new tag
+```cpp
+case TAG_PRESENT:
+  if (!isSameTag) {
+    // different tag detected
+    tagState = TAG_DETECTED;
+    firstSeenTime = currentTime;
+    clearTagData();
+  }
+  // otherwise same tag still present - no action needed
+  break;
+```
+- TAG_REMOVED -> TAG_DETECTED: a tag that was removed has come back (or a new one appeared), start fresh new detection
+```cpp
+case TAG_REMOVED:
+  tagState = TAG_DETECTED;
+  firstSeenTime = currentTime;
+  Serial.println(": Tag returned!");
+```
+
+2. Absence Detection Logic (when a tag is NOT found)
+In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns false, then the reader did NOT detect a tag. We quickly add to the count of failure to detect and use the current state of the reader to act accordingly.
+
+
+
+
 #### **`MuxController`** Class
 #### **`Battery`** Class
