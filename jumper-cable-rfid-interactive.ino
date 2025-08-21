@@ -78,10 +78,8 @@ void updateLEDs() {
         currentState = LED_RED;  // Both cables present but wrong config
       }
     } else if (posPresent || negPresent) {
-      if (currentState == LED_OFF) {  // Only set if we haven't found anything better
-        currentState = LED_RED;
-        activeBattery = i;
-      }
+      currentState = LED_OFF;
+      activeBattery = i;
     }
   }
 
@@ -90,7 +88,7 @@ void updateLEDs() {
       case LED_OFF:
         digitalWrite(GREEN_LED_PIN, LOW);
         digitalWrite(RED_LED_PIN, LOW);
-        Serial.println("LEDs OFF - no cables detected");
+        Serial.println("LEDs OFF - waiting for both tags");
         break;
       case LED_GREEN:
         digitalWrite(GREEN_LED_PIN, HIGH);
