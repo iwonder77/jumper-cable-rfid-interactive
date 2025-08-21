@@ -47,7 +47,7 @@ const uint8_t GREEN_LED_PIN = 5;
 const uint8_t RED_LED_PIN = 6;
 
 // ----- Timing Constants -----
-const unsigned long TAG_POLL_INTERVAL = 250;  // how often to check for tags (ms)
+const unsigned long TAG_POLL_INTERVAL = 100;  // how often to check for tags (ms)
 
 // ----- HARDWARE INSTANCES -----
 MFRC522DriverI2C driver{ RFID2_WS1850S_ADDR, Wire };
@@ -200,7 +200,8 @@ void setup() {
 
 // ========== MAIN LOOP ==========
 void loop() {
-  // Poll RFID readers at controlled intervals
+  // Round-robin approach to polling RFID readers at controlled intervals
+  // (1 per loop cycle, we keep track of which battery to poll)
   static unsigned long lastPollTime = 0;
   static int currentBattery = 0;  // Track which battery to poll
   unsigned long currentTime = millis();
