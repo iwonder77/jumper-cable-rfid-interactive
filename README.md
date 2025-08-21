@@ -32,15 +32,17 @@ Four defined states:
 
 2 main sections:
 1. Tag Detection Logic (when a tag IS found)
+
 In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns true, a tag has been detected. We quickly check its UID to verify if it is a new one or the same one, and update the timing variables. We then check the previous state of the reader's tag data and use a switch statement to act accordingly.
-- TAG_ABSENT -> TAG_DETECTED: first detection of a tag, advance to "detected" state and start debounce timer
+
+    - TAG_ABSENT -> TAG_DETECTED: first detection of a tag, advance to "detected" state and start debounce timer
 ```cpp
 case TAG_ABSENT:
   tagState = TAG_DETECTED;
   firstSeenTime = currentTime;  // Start debounce timer
   Serial.println(": New tag detected!");
 ```
-- TAG_DETECTED -> TAG_PRESENT: if the tag is still there after 100ms (debounce time) it's confirmed as real and present, continue to reading its data
+    - TAG_DETECTED -> TAG_PRESENT: if the tag is still there after 100ms (debounce time) it's confirmed as real and present, continue to reading its data
 ```cpp
 case TAG_DETECTED:
   if (currentTime - firstSeenTime > TAG_DEBOUNCE_TIME) {
@@ -49,7 +51,7 @@ case TAG_DETECTED:
     readTagData(reader);  // Actually read the tag's data
   }
 ```
-- TAG_PRESENT (Same Tag): if it's the same tag, do nothing, if it is a different tag, go back to TAG_DETECTED to debounce this new tag
+    - TAG_PRESENT (Same Tag): if it's the same tag, do nothing, if it is a different tag, go back to TAG_DETECTED to debounce this new tag
 ```cpp
 case TAG_PRESENT:
   if (!isSameTag) {
@@ -61,7 +63,7 @@ case TAG_PRESENT:
   // otherwise same tag still present - no action needed
   break;
 ```
-- TAG_REMOVED -> TAG_DETECTED: a tag that was removed has come back (or a new one appeared), start fresh new detection
+    - TAG_REMOVED -> TAG_DETECTED: a tag that was removed has come back (or a new one appeared), start fresh new detection
 ```cpp
 case TAG_REMOVED:
   tagState = TAG_DETECTED;
@@ -70,7 +72,41 @@ case TAG_REMOVED:
 ```
 
 2. Absence Detection Logic (when a tag is NOT found)
-In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns false, then the reader did NOT detect a tag. We quickly add to the count of failure to detect and use the current state of the reader to act accordingly.
+
+In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns false, then the reader did NOT detect a tag. We quickly add to the failure count and use the current state of the reader to act accordingly.
+
+    - TAG_DETECTED -> TAG_ABSENT: if we were trying to detect a tag but it disappeared quickly, most likely we had a false positive, go straight to ABSENT
+```cpp
+if (tagState == TAG_DETECTED) {
+  if (consecutiveFails >= 2) {  // Failed 2 times in a row
+    tagState = TAG_ABSENT;
+    clearTagData();
+    Serial.println(": Tag detection failed");
+  }
+}
+```
+    - TAG_PRESENT -> TAG_REMOVED: for an already established tag, we're more lenient, it needs to fail 3 times OR be gone for 1 second before we consider it "removed" (to prevent brief disconnections from resetting everything)
+```cpp
+else if (tagState == TAG_PRESENT) {
+  if (consecutiveFails >= TAG_PRESENCE_THRESHOLD ||  // 3 consecutive fails
+      (currentTime - lastSeenTime > TAG_ABSENCE_TIMEOUT)) {  // OR 1 second timeout
+    tagState = TAG_REMOVED;
+    Serial.println(": Tag removed!");
+  }
+}
+```
+
+    - TAG_REMOVED -> TAG_ABSENT: after a tag is marked as remove, wait another 1 seconds to confirm it's really gone, then clear all data and return to ABSENT
+```cpp
+else if (tagState == TAG_REMOVED) {
+  if (currentTime - lastSeenTime > TAG_ABSENCE_TIMEOUT * 2) {  // 2 seconds
+    tagState = TAG_ABSENT;
+    clearTagData();
+    Serial.println(": Tag removal confirmed");
+  }
+}
+```
+
 
 
 
