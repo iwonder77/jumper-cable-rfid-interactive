@@ -31,7 +31,7 @@
 
 #include "WallBatterySystem.h"
 
-// ----- HARDWARE INSTANCES -----
+// ----- MAIN RFID HARDWARE INSTANCES -----
 MFRC522DriverI2C driver{ RFID2_WS1850S_ADDR, Wire };
 MFRC522 reader{ driver };
 
