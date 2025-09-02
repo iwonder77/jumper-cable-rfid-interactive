@@ -28,15 +28,32 @@
 #include <MFRC522v2.h>
 #include <MFRC522DriverI2C.h>
 #include <MFRC522Debug.h>
+#include <SoftwareSerial.h>
 
 #include "Battery.h"
 #include "MuxController.h"
 #include "Debug.h"
 
+#define RS485_IO 5  // RS485 transmit/receive status (RE/DE) Pin (RE/DE: receive/data enable - these two are common together)
+#define RS485_RX 6  // RS485 receive (RO) Pin (RO: Receive Out)
+#define RS485_TX 7  // RS456 transmit (DI) Pin (DI: Data In)
+#define RS485_TRANSMIT HIGH
+#define BAUD_RATE 9600
+
+// RS485 object instance
+SoftwareSerial RS485(RS485_RX, RS485_TX);
+
 enum LEDState {
   LED_OFF,
   LED_GREEN,
   LED_RED
+};
+
+struct BatteryState {
+  bool posPresent;
+  bool negPresent;
+  uint8_t posPolarity;
+  uint8_t negPolarity;
 };
 
 // ----- I2C ADDRESSES -----
@@ -59,6 +76,27 @@ MFRC522 reader{ driver };
 // ----- GLOBAL BATTERY ARRAY INSTANCE -----
 const uint8_t NUM_BATTERIES = 3;
 Battery batteries[NUM_BATTERIES] = { { TCA9548A_6V_ADDR, 0, RFID2_WS1850S_ADDR }, { TCA9548A_12V_ADDR, 1, RFID2_WS1850S_ADDR }, { TCA9548A_16V_ADDR, 2, RFID2_WS1850S_ADDR } };
+BatteryState lastStates[NUM_BATTERIES];
+
+// ----- WALL STATUS DATA PACKET -----
+// data packet being sent to toy car, force packing to avoid struct padding
+// only sent when both terminals of any battery detect a tag
+struct __attribute__((packed)) WallStatusPacket {
+  uint8_t START1;
+  uint8_t START2;
+  uint8_t BAT_ID;
+  uint8_t NEG_STATE;
+  uint8_t POS_STATE;
+  uint8_t CHK;
+};
+
+uint8_t calculateChecksum(const WallStatusPacket &pkt) {
+  uint8_t sum = 0;
+  sum ^= pkt.BAT_ID;
+  sum ^= pkt.NEG_STATE;
+  sum ^= pkt.POS_STATE;
+  return sum;
+}
 
 // ========== LED CONTROL ==========
 void updateLEDs() {
@@ -115,6 +153,42 @@ void updateLEDs() {
   }
 }
 
+void updatePacket() {
+  for (int i = 0; i < NUM_BATTERIES; i++) {
+    bool posPresent = (batteries[i].getPositive().getTagState() == TAG_PRESENT);
+    bool negPresent = (batteries[i].getNegative().getTagState() == TAG_PRESENT);
+    uint8_t posPolarity = batteries[i].getPositive().polarityOK();
+    uint8_t negPolarity = batteries[i].getNegative().polarityOK();
+
+    // Check for any change in state
+    if (posPresent != lastStates[i].posPresent || negPresent != lastStates[i].negPresent || posPolarity != lastStates[i].posPolarity || negPolarity != lastStates[i].negPolarity) {
+
+      // Update the stored state
+      lastStates[i].posPresent = posPresent;
+      lastStates[i].negPresent = negPresent;
+      lastStates[i].posPolarity = posPolarity;
+      lastStates[i].negPolarity = negPolarity;
+
+      // Only send if both tags present
+      if (posPresent && negPresent) {
+        WallStatusPacket packet = { 0 };
+        packet.START1 = 0xAA;
+        packet.START2 = 0x55;
+        packet.BAT_ID = batteries[i].getId();
+        packet.NEG_STATE = negPolarity;
+        packet.POS_STATE = posPolarity;
+        packet.CHK = calculateChecksum(packet);
+
+        RS485.write((uint8_t *)&packet, sizeof(WallStatusPacket));
+        RS485.flush();
+
+        DEBUG_PRINT("📤 Packet sent for battery ");
+        DEBUG_PRINTLN(batteries[i].getName());
+      }
+    }
+  }
+}
+
 // ========== SETUP ==========
 void setup() {
   Serial.begin(115200);
@@ -127,8 +201,23 @@ void setup() {
   digitalWrite(GREEN_LED_PIN, LOW);
   digitalWrite(RED_LED_PIN, LOW);
 
+  pinMode(RS485_IO, OUTPUT);
+
+  // set RS485 device to TRANSMIT mode at startup
+  digitalWrite(RS485_IO, RS485_TRANSMIT);
+
+  // set the baud rate
+  // the longer the wire the slower you should set the transmission rate
+  // anything here (300, 1200, 2400, 14400, 19200, etc) MUST BE THE SAME
+  // AS THE SENDER UNIT
+  RS485.begin(BAUD_RATE);
+
   Wire.begin();
   Wire.setClock(100000);
+
+  for (int i = 0; i < NUM_BATTERIES; i++) {
+    lastStates[i] = { false, false, 0, 0 };
+  }
 
   // disable all MUX channels initially
   for (int i = 0; i < NUM_BATTERIES; i++) {
@@ -190,6 +279,7 @@ void loop() {
     lastPollTime = currentTime;
   }
 
+  updatePacket();
   updateLEDs();
   delay(10);  // Reduced delay since we're polling less frequently
 }
