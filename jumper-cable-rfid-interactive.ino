@@ -1,7 +1,8 @@
 /* 
 * ----------------------------------------------
-* PROJECT NAME: Better Battery Terminal Interactive w/ RFID 
-* Description: Using more organized code and better principles in OOP to create a working and smooth version of the battery terminal interactive
+* PROJECT NAME: Jumper Cable RFID Interactive 
+* Description: Using more organized code and better principles in OOP to create a working and clean version of the 
+*              jumper cable + battery terminal interactive
 *
 * Author: Isai Sanchez 
 * Date: 8-19-25 
@@ -43,8 +44,8 @@ const uint8_t TCA9548A_16V_ADDR = 0x72;
 const uint8_t RFID2_WS1850S_ADDR = 0x28;
 
 // ----- LED Test Pins -----
-const uint8_t GREEN_LED_PIN = 5;
-const uint8_t RED_LED_PIN = 6;
+const uint8_t GREEN_LED_PIN = 2;
+const uint8_t RED_LED_PIN = 3;
 
 // ----- Timing Constants -----
 const unsigned long TAG_POLL_INTERVAL = 100;  // how often to check for tags (ms)
@@ -56,7 +57,6 @@ MFRC522 reader{ driver };
 // ----- GLOBAL BATTERY ARRAY INSTANCE -----
 const uint8_t NUM_BATTERIES = 3;
 Battery batteries[NUM_BATTERIES] = { { TCA9548A_6V_ADDR, 0, RFID2_WS1850S_ADDR }, { TCA9548A_12V_ADDR, 1, RFID2_WS1850S_ADDR }, { TCA9548A_16V_ADDR, 2, RFID2_WS1850S_ADDR } };
-const char* batteryNames[NUM_BATTERIES] = { "6V ", "12V", "16V" };
 
 // ========== LED CONTROL ==========
 void updateLEDs() {
@@ -94,20 +94,20 @@ void updateLEDs() {
         digitalWrite(GREEN_LED_PIN, HIGH);
         digitalWrite(RED_LED_PIN, LOW);
         Serial.print("✅ ");
-        Serial.print(batteryNames[activeBattery]);
+        Serial.print(batteries[activeBattery].getName());
         Serial.println(" battery ready for jumpstart!");
         break;
       case LED_RED:
         digitalWrite(GREEN_LED_PIN, LOW);
         digitalWrite(RED_LED_PIN, HIGH);
         Serial.print("❌ ");
-        Serial.print(batteryNames[activeBattery]);
+        Serial.print(batteries[activeBattery].getName());
         Serial.println(" battery incorrect configuration");
         break;
     }
 
     if (activeBattery >= 0) {
-      batteries[activeBattery].printStatus();
+      batteries[activeBattery].printBatteryStatus();
     }
     lastState = currentState;
   }
@@ -128,63 +128,38 @@ void setup() {
   Wire.begin();
   Wire.setClock(100000);
 
-  // disable all channels
+  // disable all MUX channels initially
   for (int i = 0; i < NUM_BATTERIES; i++) {
     MuxController::disableChannel(batteries[i].getMuxAddr());
   }
 
-  // test MUX communication one by one
-  Serial.println("\nTesting MUX communication...");
+  // initialize each battery
+  Serial.println("\nInitializing batteries...");
+  bool systemOK = true;
+
   for (int i = 0; i < NUM_BATTERIES; i++) {
-    Wire.beginTransmission(batteries[i].getMuxAddr());
-    byte result = Wire.endTransmission();
+    Serial.print("\n--- Initializing ");
+    Serial.print(batteries[i].getName());
+    Serial.println(" Battery ---");
 
-    Serial.print(batteryNames[i]);
-    Serial.print(" Battery MUX (0x");
-    Serial.print(batteries[i].getMuxAddr(), HEX);
-    Serial.print("): ");
-    Serial.println(result == 0 ? "OK" : "FAILED");
-  }
+    bool batteryOK = batteries[i].initialize(reader);
+    batteries[i].printInitializationSummary();
 
-  Serial.println("\nInitializing RFID Readers...");
-  for (int i = 0; i < NUM_BATTERIES; i++) {
-    Serial.print("\n--- ");
-    Serial.print(batteryNames[i]);
-    Serial.print(" Battery (MUX 0x");
-    Serial.print(batteries[i].getMuxAddr(), HEX);
-    Serial.println(") --- ");
-
-    batteries[i].initializeReaders(reader);
-
-    if (!batteries[i].getPositive().getReaderStatus() && !batteries[i].getNegative().getReaderStatus()) {
-      Serial.println("ERROR: No readers responding on  ");
-      Serial.print(batteryNames[i]);
-      Serial.print(" Battery! Check wiring.");
-      while (1) {
-        digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
-        delay(500);
-      }
-    }
-    if (!batteries[i].getPositive().getReaderStatus()) {
-      Serial.println("Warning: Positive Terminal reader on ");
-      Serial.print(batteryNames[i]);
-      Serial.print(" Battery not responding");
-    }
-    if (!batteries[i].getNegative().getReaderStatus()) {
-      Serial.println("Warning: Negative Terminal reader on ");
-      Serial.print(i == 0 ? "6V" : (i == 1 ? "12V" : "16V"));
-      Serial.print(" Battery not responding");
+    if (!batteryOK) {
+      Serial.print("ERROR: ");
+      Serial.print(batteries[i].getName());
+      Serial.println(" battery initialization failed!");
+      systemOK = false;
     }
   }
 
-  Serial.println("\n === Initialization Summary ===");
-
-  for (int i = 0; i < NUM_BATTERIES; i++) {
-    Serial.print(batteryNames[i]);
-    Serial.print(" Battery: Positive=");
-    Serial.print(batteries[i].getPositive().getReaderStatus() ? "OK" : "FAILED");
-    Serial.print(", Negative=");
-    Serial.println(batteries[i].getNegative().getReaderStatus() ? "OK" : "FAILED");
+  // Handle system failure
+  if (!systemOK) {
+    Serial.println("\nSystem initialization failed! Check wiring.");
+    while (1) {
+      digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
+      delay(500);
+    }
   }
 
   // disable all channels
