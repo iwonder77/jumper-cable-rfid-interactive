@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "Battery.h"
+#include "Debug.h"
 #include "MuxController.h"
 
 bool Battery::initialize(MFRC522 &reader) {
@@ -35,9 +36,9 @@ void Battery::initializeReaders(MFRC522 &reader) {
   negative.initialize(reader);
 
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
-    Serial.print("Warning: Battery ");
-    Serial.print(id);
-    Serial.println(" has failed terminal(s)");
+    DEBUG_PRINT("Warning: Battery ");
+    DEBUG_PRINT(id);
+    DEBUG_PRINTLN(" has failed terminal(s)");
   }
 }
 
@@ -74,25 +75,25 @@ bool Battery::hasValidConfiguration() const {
 }
 
 void Battery::printBatteryStatus() const {
-  Serial.println("--- Configuration Status ---");
+  DEBUG_PRINTLN("--- Configuration Status ---");
 
-  Serial.print("Positive Terminal: ");
+  DEBUG_PRINT("Positive Terminal: ");
   positive.printStatus();
 
-  Serial.print("Negative Terminal: ");
+  DEBUG_PRINT("Negative Terminal: ");
   negative.printStatus();
 
-  Serial.println("----------------------------");
+  DEBUG_PRINTLN("----------------------------");
 }
 
 void Battery::printInitializationSummary() const {
-  Serial.print(getName());
-  Serial.print(" Wall Battery: MUX=");
-  Serial.print(muxCommunicationOK ? "OK" : "FAILED");
-  Serial.print(", Positive=");
-  Serial.print(positive.getReaderStatus() ? "OK" : "FAILED");
-  Serial.print(", Negative=");
-  Serial.println(negative.getReaderStatus() ? "OK" : "FAILED");
+  DEBUG_PRINT(getName());
+  DEBUG_PRINT(" Wall Battery: MUX=");
+  DEBUG_PRINT(muxCommunicationOK ? "OK" : "FAILED");
+  DEBUG_PRINT(", Positive=");
+  DEBUG_PRINT(positive.getReaderStatus() ? "OK" : "FAILED");
+  DEBUG_PRINT(", Negative=");
+  DEBUG_PRINTLN(negative.getReaderStatus() ? "OK" : "FAILED");
 }
 
 const char *Battery::getName() const {

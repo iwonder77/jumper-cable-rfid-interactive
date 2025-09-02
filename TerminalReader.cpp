@@ -1,21 +1,22 @@
 #include "TerminalReader.h"
+#include "Debug.h"
 
 void TerminalReader::initialize(MFRC522 &reader) {
   // assume channel has already been set
-  Serial.print("Testing ");
-  Serial.print(name);
-  Serial.print(" Reader I2C Communication on Channel ");
-  Serial.print(channel);
-  Serial.print(": ");
+  DEBUG_PRINT("Testing ");
+  DEBUG_PRINT(name);
+  DEBUG_PRINT(" Reader I2C Communication on Channel ");
+  DEBUG_PRINT(channel);
+  DEBUG_PRINT(": ");
 
   Wire.beginTransmission(address);
   if (Wire.endTransmission() != 0) {
-    Serial.println("FAILED - I2C Communication ERROR");
+    DEBUG_PRINTLN("FAILED - I2C Communication ERROR");
     isReaderOK = false;
     return;
   }
 
-  Serial.println(" SUCCESS");
+  DEBUG_PRINTLN(" SUCCESS");
   isReaderOK = true;
 
   // initialize
@@ -31,19 +32,19 @@ void TerminalReader::update(MFRC522 &reader) {
   unsigned long currentTime = millis();
   bool tagDetected = false;
 
-  // Try to detect tag without halting it
+  // try to detect tag without halting it
   if (reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()) {
     tagDetected = true;
 
-    // Check if this is the same tag or a different one
+    // check if this is the same tag or a different one
     bool isSameTag = (lastUIDLength == reader.uid.size) &&
                      compareUID(lastUID, reader.uid.uidByte, reader.uid.size);
 
-    // Update UID
+    // update UID
     memcpy(lastUID, reader.uid.uidByte, reader.uid.size);
     lastUIDLength = reader.uid.size;
 
-    // Update timing
+    // update timing
     lastSeenTime = currentTime;
     consecutiveFails = 0;
 
@@ -52,16 +53,16 @@ void TerminalReader::update(MFRC522 &reader) {
     case TAG_ABSENT:
       tagState = TAG_DETECTED;
       firstSeenTime = currentTime; // start debounce timer
-      Serial.print(name);
-      Serial.println(": New tag detected!");
+      DEBUG_PRINT(name);
+      DEBUG_PRINTLN(": New tag detected!");
       break;
 
     case TAG_DETECTED:
-      // Check if enough time has passed for debouncing
+      // check if enough time has passed for debouncing
       if (currentTime - firstSeenTime > TAG_DEBOUNCE_TIME) {
         tagState = TAG_PRESENT;
-        Serial.print(name);
-        Serial.println(": Tag confirmed present");
+        DEBUG_PRINT(name);
+        DEBUG_PRINTLN(": Tag confirmed present");
         readTagData(reader);
       }
       break;
@@ -72,8 +73,8 @@ void TerminalReader::update(MFRC522 &reader) {
         tagState = TAG_DETECTED;
         firstSeenTime = currentTime;
         clearTagData();
-        Serial.print(name);
-        Serial.println(": Different tag detected!");
+        DEBUG_PRINT(name);
+        DEBUG_PRINTLN(": Different tag detected!");
       }
       // otherwise same tag still present - no action needed
       break;
@@ -81,8 +82,8 @@ void TerminalReader::update(MFRC522 &reader) {
     case TAG_REMOVED:
       tagState = TAG_DETECTED;
       firstSeenTime = currentTime;
-      Serial.print(name);
-      Serial.println(": Tag returned!");
+      DEBUG_PRINT(name);
+      DEBUG_PRINTLN(": Tag returned!");
       break;
     }
   }
@@ -97,24 +98,24 @@ void TerminalReader::update(MFRC522 &reader) {
       if (consecutiveFails >= 2) {
         tagState = TAG_ABSENT;
         clearTagData();
-        Serial.print(name);
-        Serial.println(": Tag detection failed");
+        DEBUG_PRINT(name);
+        DEBUG_PRINTLN(": Tag detection failed");
       }
     } else if (tagState == TAG_PRESENT) {
       // More lenient for established tags
       if (consecutiveFails >= TAG_PRESENCE_THRESHOLD ||
           (currentTime - lastSeenTime > TAG_ABSENCE_TIMEOUT)) {
         tagState = TAG_REMOVED;
-        Serial.print(name);
-        Serial.println(": Tag removed!");
+        DEBUG_PRINT(name);
+        DEBUG_PRINTLN(": Tag removed!");
       }
     } else if (tagState == TAG_REMOVED) {
       // Confirm removal
       if (currentTime - lastSeenTime > TAG_ABSENCE_TIMEOUT * 2) {
         tagState = TAG_ABSENT;
         clearTagData();
-        Serial.print(name);
-        Serial.println(": Tag removal confirmed");
+        DEBUG_PRINT(name);
+        DEBUG_PRINTLN(": Tag removal confirmed");
       }
     }
   }
@@ -123,19 +124,19 @@ void TerminalReader::update(MFRC522 &reader) {
 void TerminalReader::printStatus() const {
   switch (tagState) {
   case TAG_ABSENT:
-    Serial.println("No card");
+    DEBUG_PRINTLN("No card");
     break;
   case TAG_DETECTED:
-    Serial.println("Detecting...");
+    DEBUG_PRINTLN("Detecting...");
     break;
   case TAG_PRESENT:
-    Serial.print(tagData.type);
-    Serial.print(" #");
-    Serial.print(tagData.id);
-    Serial.println(isCorrectPolarity ? " ✓" : " ✗ Wrong polarity");
+    DEBUG_PRINT(tagData.type);
+    DEBUG_PRINT(" #");
+    DEBUG_PRINT(tagData.id);
+    DEBUG_PRINTLN(isCorrectPolarity ? " ✓" : " ✗ Wrong polarity");
     break;
   case TAG_REMOVED:
-    Serial.println("Card removed (confirming...)");
+    DEBUG_PRINTLN("Card removed (confirming...)");
     break;
   }
 }
@@ -151,16 +152,16 @@ void TerminalReader::readTagData(MFRC522 &reader) {
   if (!isReaderOK || tagState != TAG_PRESENT)
     return;
 
-  Serial.print(name);
-  Serial.println(": Reading tag data...");
+  DEBUG_PRINT(name);
+  DEBUG_PRINTLN(": Reading tag data...");
 
   byte buffer[18];
   byte bufferSize = sizeof(buffer);
 
   if (reader.MIFARE_Read(TAG_START_READ_PAGE, buffer, &bufferSize) !=
       MFRC522::StatusCode::STATUS_OK) {
-    Serial.print(name);
-    Serial.println(": Failed to read card data");
+    DEBUG_PRINT(name);
+    DEBUG_PRINTLN(": Failed to read card data");
     // Don't clear tag data - we know tag is present, just couldn't read it
     return;
   }
@@ -171,8 +172,8 @@ void TerminalReader::readTagData(MFRC522 &reader) {
   uint8_t expectedChecksum =
       calculateChecksum((uint8_t *)&data, sizeof(data) - 1);
   if (expectedChecksum != data.checksum) {
-    Serial.print(name);
-    Serial.println(": Checksum error");
+    DEBUG_PRINT(name);
+    DEBUG_PRINTLN(": Checksum error");
     return;
   }
 
@@ -182,16 +183,16 @@ void TerminalReader::readTagData(MFRC522 &reader) {
   bool isTerminalPos = (channel == 1); // positive channel is 1
   isCorrectPolarity = (isTagPos == isTerminalPos);
 
-  Serial.print(name);
-  Serial.print(": Read ");
-  Serial.print(data.type);
-  Serial.print(" cable #");
-  Serial.print(data.id);
+  DEBUG_PRINT(name);
+  DEBUG_PRINT(": Read ");
+  DEBUG_PRINT(data.type);
+  DEBUG_PRINT(" cable #");
+  DEBUG_PRINT(data.id);
 
   if (!isCorrectPolarity) {
-    Serial.print(" [WRONG POLARITY!]");
+    DEBUG_PRINT(" [WRONG POLARITY!]");
   }
-  Serial.println();
+  DEBUG_PRINTLN();
 
   /*****************
    * DON'T HALT - let tag remain active for continuous detection

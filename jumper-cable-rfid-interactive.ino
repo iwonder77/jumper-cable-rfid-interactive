@@ -19,7 +19,8 @@
 *   - Found through trial and error that the RFID2 boards have internal pull-up resistors for the SDA/SCL lines. So these were 
 *     connected straight to the TCA9548A multiplexer's output channels (SD1/SC1 and SD2/SC2) without the use of an external pull up resistor
 *   - Also found out that the SDA/SCL lines for the RFID2 readers are at 3.3V logic level, so the multiplexer was powered with Arduino's
-*     3V3/GND pins
+*     3V3/GND pins, and since the Arduino's SDA/SCL lines are at 5V logic level, a level converter was used to communicate between 
+*     Arduino <---> RFID2 Readers
 * ----------------------------------------------
 */
 
@@ -30,6 +31,7 @@
 
 #include "Battery.h"
 #include "MuxController.h"
+#include "Debug.h"
 
 enum LEDState {
   LED_OFF,
@@ -88,21 +90,21 @@ void updateLEDs() {
       case LED_OFF:
         digitalWrite(GREEN_LED_PIN, LOW);
         digitalWrite(RED_LED_PIN, LOW);
-        Serial.println("LEDs OFF - waiting for both tags");
+        DEBUG_PRINTLN("LEDs OFF - waiting for both tags");
         break;
       case LED_GREEN:
         digitalWrite(GREEN_LED_PIN, HIGH);
         digitalWrite(RED_LED_PIN, LOW);
-        Serial.print("✅ ");
-        Serial.print(batteries[activeBattery].getName());
-        Serial.println(" battery ready for jumpstart!");
+        DEBUG_PRINT("✅ ");
+        DEBUG_PRINT(batteries[activeBattery].getName());
+        DEBUG_PRINTLN(" battery ready for jumpstart!");
         break;
       case LED_RED:
         digitalWrite(GREEN_LED_PIN, LOW);
         digitalWrite(RED_LED_PIN, HIGH);
-        Serial.print("❌ ");
-        Serial.print(batteries[activeBattery].getName());
-        Serial.println(" battery incorrect configuration");
+        DEBUG_PRINT("❌ ");
+        DEBUG_PRINT(batteries[activeBattery].getName());
+        DEBUG_PRINTLN(" battery incorrect configuration");
         break;
     }
 
@@ -118,7 +120,7 @@ void setup() {
   Serial.begin(115200);
   while (!Serial) delay(10);
 
-  Serial.println("=== Jumper Cable Interactive v2 ===");
+  DEBUG_PRINTLN("=== Jumper Cable Interactive v2 ===");
 
   pinMode(GREEN_LED_PIN, OUTPUT);
   pinMode(RED_LED_PIN, OUTPUT);
@@ -134,28 +136,28 @@ void setup() {
   }
 
   // initialize each battery
-  Serial.println("\nInitializing batteries...");
+  DEBUG_PRINTLN("\nInitializing batteries...");
   bool systemOK = true;
 
   for (int i = 0; i < NUM_BATTERIES; i++) {
-    Serial.print("\n--- Initializing ");
-    Serial.print(batteries[i].getName());
-    Serial.println(" Battery ---");
+    DEBUG_PRINT("\n--- Initializing ");
+    DEBUG_PRINT(batteries[i].getName());
+    DEBUG_PRINTLN(" Battery ---");
 
     bool batteryOK = batteries[i].initialize(reader);
     batteries[i].printInitializationSummary();
 
     if (!batteryOK) {
-      Serial.print("ERROR: ");
-      Serial.print(batteries[i].getName());
-      Serial.println(" battery initialization failed!");
+      DEBUG_PRINT("ERROR: ");
+      DEBUG_PRINT(batteries[i].getName());
+      DEBUG_PRINTLN(" battery initialization failed!");
       systemOK = false;
     }
   }
 
   // Handle system failure
   if (!systemOK) {
-    Serial.println("\nSystem initialization failed! Check wiring.");
+    DEBUG_PRINTLN("\nSystem initialization failed! Check wiring.");
     while (1) {
       digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
       delay(500);
@@ -167,8 +169,8 @@ void setup() {
     MuxController::disableChannel(batteries[i].getMuxAddr());
   }
 
-  Serial.println("\n=== System Ready ===");
-  Serial.println("Place jumper cable tags on terminals to test");
+  DEBUG_PRINTLN("\n=== System Ready ===");
+  DEBUG_PRINTLN("Place jumper cable tags on terminals to test");
 }
 
 // ========== MAIN LOOP ==========
