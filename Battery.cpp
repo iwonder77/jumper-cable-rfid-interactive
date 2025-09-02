@@ -3,10 +3,27 @@
 #include "Battery.h"
 #include "MuxController.h"
 
-void Battery::initializeReaders(MFRC522 &reader) {
-  Serial.print("Initializing Battery ");
-  Serial.println(id);
+bool Battery::initialize(MFRC522 &reader) {
+  // Test MUX communication first
+  muxCommunicationOK = testMuxCommunication();
+  if (!muxCommunicationOK) {
+    return false;
+  }
 
+  // Initialize the RFID readers
+  initializeReaders(reader);
+
+  // Return true if at least one reader is working
+  return (positive.getReaderStatus() && negative.getReaderStatus());
+}
+
+bool Battery::testMuxCommunication() const {
+  Wire.beginTransmission(getMuxAddr());
+  byte result = Wire.endTransmission();
+  return (result == 0);
+}
+
+void Battery::initializeReaders(MFRC522 &reader) {
   // Initialize positive terminal
   MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
   delay(10);
@@ -27,28 +44,28 @@ void Battery::initializeReaders(MFRC522 &reader) {
 void Battery::updateReaders(MFRC522 &reader) {
   // update positive terminal
   MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
-  delay(20);
+  delay(10);
   positive.update(reader);
 
   // update negative terminal
   MuxController::selectChannel(muxAddr, NEGATIVE_TERMINAL_CHANNEL);
-  delay(20);
+  delay(10);
   negative.update(reader);
 
   MuxController::disableChannel(muxAddr);
 }
 
 bool Battery::hasValidConfiguration() const {
-  // Both terminals must have tags in PRESENT state
+  // both terminals must have tags in PRESENT state
   if (positive.getTagState() != TAG_PRESENT ||
       negative.getTagState() != TAG_PRESENT)
     return false;
 
-  // Both cards must have correct polarity
+  // both cards must have correct polarity
   if (!positive.polarityOK() || !negative.polarityOK())
     return false;
 
-  // Cable IDs must form valid pair
+  // cable IDs must form valid pair
   uint8_t posID = positive.getTagData().id;
   uint8_t negID = negative.getTagData().id;
 
@@ -56,7 +73,7 @@ bool Battery::hasValidConfiguration() const {
          (posID == 2 && negID == 3) || (posID == 1 && negID == 4);
 }
 
-void Battery::printStatus() const {
+void Battery::printBatteryStatus() const {
   Serial.println("--- Configuration Status ---");
 
   Serial.print("Positive Terminal: ");
@@ -66,4 +83,27 @@ void Battery::printStatus() const {
   negative.printStatus();
 
   Serial.println("----------------------------");
+}
+
+void Battery::printInitializationSummary() const {
+  Serial.print(getName());
+  Serial.print(" Wall Battery: MUX=");
+  Serial.print(muxCommunicationOK ? "OK" : "FAILED");
+  Serial.print(", Positive=");
+  Serial.print(positive.getReaderStatus() ? "OK" : "FAILED");
+  Serial.print(", Negative=");
+  Serial.println(negative.getReaderStatus() ? "OK" : "FAILED");
+}
+
+const char *Battery::getName() const {
+  switch (id) {
+  case 0:
+    return "6V";
+  case 1:
+    return "12V";
+  case 2:
+    return "16V";
+  default:
+    return "Unknown";
+  }
 }

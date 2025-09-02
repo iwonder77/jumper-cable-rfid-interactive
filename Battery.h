@@ -17,17 +17,22 @@ public:
         negative(readerAddr, "Negative", NEGATIVE_TERMINAL_CHANNEL),
         positive(readerAddr, "Positive", POSITIVE_TERMINAL_CHANNEL) {}
 
+  bool initialize(MFRC522 &reader);
+  bool testMuxCommunication() const;
   void initializeReaders(MFRC522 &reader);
   void updateReaders(MFRC522 &reader);
   bool hasValidConfiguration() const;
-  void printStatus() const;
+  void printBatteryStatus() const;
+  void printInitializationSummary() const;
 
   const TerminalReader &getPositive() const { return positive; }
   const TerminalReader &getNegative() const { return negative; }
   uint8_t getMuxAddr() const { return muxAddr; }
   uint8_t getId() const { return id; }
+  const char *getName() const;
 
 private:
+  bool muxCommunicationOK;
   uint8_t muxAddr;
   uint8_t id;
   TerminalReader positive;
