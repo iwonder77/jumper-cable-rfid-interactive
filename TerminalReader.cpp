@@ -22,7 +22,7 @@ void TerminalReader::initialize(MFRC522 &reader) {
   // initialize
   reader.PCD_Init();
 
-  delay(50);
+  delay(20);
 }
 
 void TerminalReader::update(MFRC522 &reader) {
