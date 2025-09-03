@@ -157,7 +157,7 @@ void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
   packet.BAT_ID = batteries[batteryIndex].getId();
   packet.NEG_PRESENT = state.negPresent ? 1 : 0;
   packet.NEG_STATE = state.negPolarity ? 1 : 0;
-  packet.POS_PRESENT = state.posPolarity ? 1 : 0;
+  packet.POS_PRESENT = state.posPresent ? 1 : 0;
   packet.POS_STATE = state.posPolarity ? 1 : 0;
   packet.CHK = calculateChecksum(packet);
 
