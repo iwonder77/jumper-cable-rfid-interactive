@@ -142,10 +142,9 @@ void WallBatterySystem::updateCommunication() {
       // update the stored state
       lastStates[i] = currentState;
 
-      // only send packet if both tags are present
-      if (currentState.posPresent && currentState.negPresent) {
-        sendBatteryPacket(i, currentState);
-      }
+      // only send packet if change in state has occured
+      sendBatteryPacket(i, currentState);
+      delay(5);
     }
   }
 }
@@ -156,8 +155,10 @@ void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
   packet.START1 = 0xAA;
   packet.START2 = 0x55;
   packet.BAT_ID = batteries[batteryIndex].getId();
-  packet.NEG_STATE = state.negPolarity;
-  packet.POS_STATE = state.posPolarity;
+  packet.NEG_PRESENT = state.negPresent ? 1 : 0;
+  packet.NEG_STATE = state.negPolarity ? 1 : 0;
+  packet.POS_PRESENT = state.posPolarity ? 1 : 0;
+  packet.POS_STATE = state.posPolarity ? 1 : 0;
   packet.CHK = calculateChecksum(packet);
 
   rs485.write((uint8_t *)&packet, sizeof(WallStatusPacket));
@@ -281,7 +282,9 @@ uint8_t
 WallBatterySystem::calculateChecksum(const WallStatusPacket &pkt) const {
   uint8_t sum = 0;
   sum ^= pkt.BAT_ID;
+  sum ^= pkt.NEG_PRESENT;
   sum ^= pkt.NEG_STATE;
+  sum ^= pkt.POS_PRESENT;
   sum ^= pkt.POS_STATE;
   return sum;
 }

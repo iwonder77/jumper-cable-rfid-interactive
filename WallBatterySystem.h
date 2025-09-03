@@ -34,8 +34,8 @@ enum LEDState { LED_OFF, LED_GREEN, LED_RED };
 struct BatteryState {
   bool posPresent;
   bool negPresent;
-  uint8_t posPolarity;
-  uint8_t negPolarity;
+  bool posPolarity;
+  bool negPolarity;
 
   // equality operator for easy comparison (used when checking previous vs
   // current state)
@@ -50,7 +50,9 @@ struct __attribute__((packed)) WallStatusPacket {
   uint8_t START1;
   uint8_t START2;
   uint8_t BAT_ID;
+  uint8_t NEG_PRESENT;
   uint8_t NEG_STATE;
+  uint8_t POS_PRESENT;
   uint8_t POS_STATE;
   uint8_t CHK;
 };
