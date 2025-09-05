@@ -48,7 +48,8 @@ void TerminalReader::update(MFRC522 &reader) {
     lastSeenTime = currentTime;
     consecutiveFails = 0;
 
-    // state transitions
+    // state transitions from previous tagState to new tagState now that one has
+    // been detected
     switch (tagState) {
     case TAG_ABSENT:
       tagState = TAG_DETECTED;
@@ -76,7 +77,8 @@ void TerminalReader::update(MFRC522 &reader) {
         DEBUG_PRINT(name);
         DEBUG_PRINTLN(": Different tag detected!");
       }
-      // otherwise same tag still present - no action needed
+      // otherwise same tag still present - no action needed (already read its
+      // data)
       break;
 
     case TAG_REMOVED:
