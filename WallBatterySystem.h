@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <MFRC522v2.h>
-#include <SoftwareSerial.h>
 
 #include "Battery.h"
 
@@ -23,10 +22,8 @@ const uint8_t RED_LED_PIN = 3;
 
 // ----- RS485 PINS -----
 const uint8_t RS485_IO = 5;
-const uint8_t RS485_RX = 6;
-const uint8_t RS485_TX = 7;
 const uint8_t RS485_TRANSMIT = HIGH;
-const uint16_t BAUD_RATE = 9600;
+const uint16_t RS485_BAUD_RATE = 9600;
 
 // ----- LEDState ENUM -----
 enum LEDState { LED_OFF, LED_GREEN, LED_RED };
@@ -79,9 +76,6 @@ private:
   // ----- CLASS INSTANCES -----
   Battery batteries[NUM_BATTERIES];
   BatteryState lastStates[NUM_BATTERIES];
-
-  // ----- SOFTWARE SERIAL INSTANCE for RS485 COMM -----
-  SoftwareSerial rs485;
 
   // ----- SYSTEM STATE -----
   LEDState currentLEDState;

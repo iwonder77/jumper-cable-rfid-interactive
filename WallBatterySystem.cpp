@@ -7,9 +7,8 @@ WallBatterySystem::WallBatterySystem()
     : batteries{{TCA9548A_6V_ADDR, 0, RFID2_WS1850S_ADDR},
                 {TCA9548A_12V_ADDR, 1, RFID2_WS1850S_ADDR},
                 {TCA9548A_16V_ADDR, 2, RFID2_WS1850S_ADDR}},
-      rs485(RS485_RX, RS485_TX), currentLEDState(LED_OFF),
-      lastLEDState(LED_OFF), activeBattery(-1), systemHealthy(false),
-      lastPollTime(0), currentPollingBattery(0) {
+      currentLEDState(LED_OFF), lastLEDState(LED_OFF), activeBattery(-1),
+      systemHealthy(false), lastPollTime(0), currentPollingBattery(0) {
 
   for (int i = 0; i < NUM_BATTERIES; i++) {
     lastStates[i] = {false, false, 0, 0};
@@ -32,10 +31,10 @@ bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
   lastLEDState = LED_OFF;
 
   // begin RS485 Software Serial
-  rs485.begin(BAUD_RATE);
+  Serial1.begin(RS485_BAUD_RATE);
 
-  DEBUG_PRINT("RS485 initialized at ");
-  DEBUG_PRINT(BAUD_RATE);
+  DEBUG_PRINT("RS485 Hardware Serial1 initialized at ");
+  DEBUG_PRINT(RS485_BAUD_RATE);
   DEBUG_PRINTLN(" baud");
 
   DEBUG_PRINTLN("=== Jumper Cable Interactive v2 ===");
@@ -161,11 +160,22 @@ void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
   packet.POS_STATE = state.posPolarity ? 1 : 0;
   packet.CHK = calculateChecksum(packet);
 
-  rs485.write((uint8_t *)&packet, sizeof(WallStatusPacket));
-  rs485.flush();
+  Serial1.write((uint8_t *)&packet, sizeof(WallStatusPacket));
+  Serial1.flush();
 
   DEBUG_PRINT("📤 Packet sent for battery ");
   DEBUG_PRINTLN(batteries[batteryIndex].getName());
+
+  DEBUG_PRINT("Valid Packet Sent -> BAT:");
+  DEBUG_PRINT(packet.BAT_ID);
+  DEBUG_PRINT(", NEG_PRESENT: ");
+  DEBUG_PRINT(packet.NEG_PRESENT);
+  DEBUG_PRINT(", NEG_STATE: ");
+  DEBUG_PRINT(packet.NEG_STATE);
+  DEBUG_PRINT(", POS_PRESENT: ");
+  DEBUG_PRINT(packet.POS_PRESENT);
+  DEBUG_PRINT(", POS_STATE: ");
+  DEBUG_PRINTLN(packet.POS_STATE);
 }
 
 // ========== LED CONTROL ==========
