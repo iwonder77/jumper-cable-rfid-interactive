@@ -18,8 +18,8 @@ const uint8_t TCA9548A_16V_ADDR = 0x72;
 const uint8_t RFID2_WS1850S_ADDR = 0x28;
 
 // ----- LED PINS -----
-const uint8_t GREEN_LED_PIN = 2;
-const uint8_t RED_LED_PIN = 3;
+const uint8_t GREEN_LED_PIN = 6;
+const uint8_t RED_LED_PIN = 7;
 
 // ----- RS485 PINS -----
 const uint8_t RS485_IO = 5;
