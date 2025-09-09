@@ -7,7 +7,7 @@
 #include "Battery.h"
 
 // ----- SYSTEM CONSTANTS -----
-const uint8_t NUM_BATTERIES = 3;
+static constexpr uint8_t NUM_BATTERIES = 3;
 const unsigned long POLL_INTERVAL =
     50; // how often to poll all battery readers for tags (ms)
 
