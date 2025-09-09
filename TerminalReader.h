@@ -52,9 +52,10 @@ private:
 
   // ---------- CONSTANTS ----------
   static constexpr unsigned long TAG_DEBOUNCE_TIME =
-      300; // debounce time for tag detection (ms)
+      150; // debounce time for tag detection (ms) (3 * round robin polling
+           // interval)
   static constexpr unsigned long TAG_ABSENCE_TIMEOUT =
-      900; // time before considering tag removed (ms)
+      450; // time before considering tag removed (ms) (3 * tag debounce)
   static constexpr uint8_t TAG_PRESENCE_THRESHOLD =
       3; // consecutive reading fails before marking absent
   static constexpr uint8_t TAG_START_READ_PAGE =
