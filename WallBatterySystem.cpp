@@ -64,7 +64,7 @@ bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
 void WallBatterySystem::updateSystem(MFRC522 &reader) {
   unsigned long currentTime = millis();
 
-  if (currentTime - lastPollTime >= TAG_POLL_INTERVAL) {
+  if (currentTime - lastPollTime >= POLL_INTERVAL) {
     // Poll only one battery per cycle (round-robin)
     batteries[currentPollingBattery].updateReaders(reader);
 

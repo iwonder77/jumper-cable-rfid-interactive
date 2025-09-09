@@ -8,7 +8,8 @@
 
 // ----- SYSTEM CONSTANTS -----
 const uint8_t NUM_BATTERIES = 3;
-const unsigned long TAG_POLL_INTERVAL = 100; // how often to check for tags (ms)
+const unsigned long POLL_INTERVAL =
+    50; // how often to poll all battery readers for tags (ms)
 
 // ----- I2C ADDRESSES -----
 const uint8_t TCA9548A_6V_ADDR = 0x70;
