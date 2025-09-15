@@ -40,8 +40,8 @@ WallBatterySystem wallSystem;
 
 // ========== SETUP ==========
 void setup() {
-  Serial.begin(115200);
-  while (!Serial) delay(10);
+  Serial.begin(9600);
+  while (!Serial);
 
   if (!wallSystem.initializeSystem(reader)) {
     // system initialization failed - wallSystem handles error state
