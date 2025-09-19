@@ -1,18 +1,33 @@
 # Jumper Cable RFID Battery Interactive
 
-## Overview
+## Project Overview
 
-Source code for the Arduino Nano that handles RFID readings of 3 batteries (each with 2 readers under the positive and negative terminals) to determine if jumper cable polarity is correct and acts accordingly. RFID tags are embedded within the jumper cables, I wrote lighteweight data onto them using [this](https://github.com/iwonder77/rw-NTAG203-rfid-tag) sketch to allow us to differentiate between positive and negative jumper cable ends. 
+Source code for the jumper cable interactive exhibit that aims to teach children how to utilize jumper cables to connect a healthy battery from a **wall mounted battery system** (Arduino Leonardo) to an unhealthy **toy car battery system** (Arduino MKRZERO). The Wall Battery System detects when RFID-tagged jumper cable ends are correctly placed on the terminals of a 6V, 12V, and 16V battery, validates polarity, and communicates battery status over RS-485. The Toy Car System receives these packets, interprets the configuration, handles its own jumper cable placement/polarity detection, and provides feedback by animating the car’s lights (LED strip) and sounds (I2S). 
+ 
+RFID tags are embedded within the jumper cables, I wrote lighteweight data onto them using this [sketch](https://github.com/iwonder77/rw-NTAG203-rfid-tag) to differentiate between positive and negative jumper cable ends. 
 
 ## Hardware Components
 
 ### Electronics
 
--   Microcontroller: Arduino Nano
+Wall Battery System:
+-   Microcontroller: Arduino Leonardo
 -   RFID Readers: 6 x RFID2 WS1850S M5Stack readers (fixed I2C address of 0x28) - 2 per battery
 -   I2C Multiplexer: 3 x Adafruit's TCA9548A 8 Channel I2C Multiplexer (variable I2C address of 0x70, 0x71, and 0x72) - 1 per battery
+-   Level Converter: 1 x 5V -> 3V3 Level Converter to allow Leonardo's 5V I2C lines to work with RFID2 reader's 3V3 level I2C lines
 -   Status LEDs: Green (correct polarity configuration) and Red (incorrect polarity configuration) indicators
--   RFID Tags: 4 x Adafruit's NTAG203 tags
+
+Toy Car System:
+-   Microcontroller: Arduino MKRZERO
+-   RFID Readers: 3 x RFID2 WS1850S M5Stack readers (fixed I2C address of 0x28) - 2 on the unhealthy battery and 1 on the car frame to represent GND
+-   I2C Multiplexer: 1 x Adafruit's TCA9548A 8 Channel I2C Multiplexer (variable I2C address of 0x70, 0x71, and 0x72)
+-   I2S DAC: 1 x Adafruit's PCM5102 I2S DAC for .wav sound data on sd card
+-   Amp: 1 x Adafruit's MAX9744 Class D Amplifier 
+-   Speaker: 1 x 4 Ohm 50 W Visatron Speaker
+-   LEDs: integration soon to come...
+
+Jumper Cables:
+-   RFID Tags: 4 x Adafruit's NTAG203 tags, 1 per clamp on jumper cable pair
 
 ### Hardware Architecture (Schematic)
 
