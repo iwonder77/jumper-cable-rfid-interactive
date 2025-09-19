@@ -109,6 +109,7 @@ void TerminalReader::update(MFRC522 &reader) {
       if (consecutiveFails >= config::TAG_PRESENCE_THRESHOLD ||
           (currentTime - lastSeenTime > config::TAG_ABSENCE_TIMEOUT)) {
         tagState = TAG_REMOVED;
+        clearTagData();
         DEBUG_PRINT(name);
         DEBUG_PRINTLN(": Tag removed!");
       }
@@ -116,7 +117,6 @@ void TerminalReader::update(MFRC522 &reader) {
       // Confirm removal
       if (currentTime - lastSeenTime > config::TAG_ABSENCE_TIMEOUT * 2) {
         tagState = TAG_ABSENT;
-        clearTagData();
         DEBUG_PRINT(name);
         DEBUG_PRINTLN(": Tag removal confirmed");
       }
