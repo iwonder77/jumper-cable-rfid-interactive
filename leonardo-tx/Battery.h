@@ -16,7 +16,6 @@ public:
 
   bool initialize(MFRC522 &reader);
   bool testMuxCommunication() const;
-  void initializeReaders(MFRC522 &reader);
   void updateReaders(MFRC522 &reader);
   bool hasValidConfiguration() const;
   void printBatteryStatus() const;

@@ -7,40 +7,31 @@
 
 bool Battery::initialize(MFRC522 &reader) {
   // Test MUX communication first
-  muxCommunicationOK = testMuxCommunication();
-  if (!muxCommunicationOK) {
+  Wire.beginTransmission(getMuxAddr());
+  byte result = Wire.endTransmission();
+  if (result != 0) {
     return false;
   }
 
-  // Initialize the RFID readers
-  initializeReaders(reader);
-
-  // Return true if at least one reader is working
-  return (positive.getReaderStatus() && negative.getReaderStatus());
-}
-
-bool Battery::testMuxCommunication() const {
-  Wire.beginTransmission(getMuxAddr());
-  byte result = Wire.endTransmission();
-  return (result == 0);
-}
-
-void Battery::initializeReaders(MFRC522 &reader) {
-  // Initialize positive terminal
+  // ----- Initialize the RFID readers -----
+  // initialize positive terminal
   MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
   delay(config::CHANNEL_SWITCH_SETTLE_MS);
-  positive.initialize(reader);
+  positive.init(reader);
 
-  // Initialize negative terminal
+  // initialize negative terminal
   MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
   delay(config::CHANNEL_SWITCH_SETTLE_MS);
-  negative.initialize(reader);
+  negative.init(reader);
 
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
     DEBUG_PRINT("Warning: Battery ");
     DEBUG_PRINT(id);
     DEBUG_PRINTLN(" has failed terminal(s)");
   }
+
+  // return true if both readers are working
+  return (positive.getReaderStatus() && negative.getReaderStatus());
 }
 
 void Battery::updateReaders(MFRC522 &reader) {
