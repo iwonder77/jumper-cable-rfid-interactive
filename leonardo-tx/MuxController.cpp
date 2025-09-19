@@ -1,4 +1,5 @@
 #include "MuxController.h"
+#include "Config.h"
 #include "Wire.h"
 
 void MuxController::selectChannel(uint8_t muxAddress, uint8_t channel) {
