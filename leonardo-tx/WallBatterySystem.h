@@ -5,26 +5,7 @@
 #include <MFRC522v2.h>
 
 #include "Battery.h"
-
-// ----- SYSTEM CONSTANTS -----
-static constexpr uint8_t NUM_BATTERIES = 3;
-const unsigned long POLL_INTERVAL =
-    50; // how often to poll all battery readers for tags (ms)
-
-// ----- I2C ADDRESSES -----
-const uint8_t TCA9548A_6V_ADDR = 0x70;
-const uint8_t TCA9548A_12V_ADDR = 0x71;
-const uint8_t TCA9548A_16V_ADDR = 0x72;
-const uint8_t RFID2_WS1850S_ADDR = 0x28;
-
-// ----- LED PINS -----
-const uint8_t GREEN_LED_PIN = 6;
-const uint8_t RED_LED_PIN = 7;
-
-// ----- RS485 PINS -----
-const uint8_t RS485_IO = 5;
-const uint8_t RS485_TRANSMIT = HIGH;
-const uint16_t RS485_BAUD_RATE = 9600;
+#include "Config.h"
 
 // ----- LEDState ENUM -----
 enum LEDState { LED_OFF, LED_GREEN, LED_RED };
@@ -75,8 +56,8 @@ public:
 
 private:
   // ----- CLASS INSTANCES -----
-  Battery batteries[NUM_BATTERIES];
-  BatteryState lastStates[NUM_BATTERIES];
+  Battery batteries[config::NUM_BATTERIES];
+  BatteryState lastStates[config::NUM_BATTERIES];
 
   // ----- SYSTEM STATE -----
   LEDState currentLEDState;

@@ -4,13 +4,13 @@
 
 // ========== CONSTRUCTOR ==========
 WallBatterySystem::WallBatterySystem()
-    : batteries{{TCA9548A_6V_ADDR, 0, RFID2_WS1850S_ADDR},
-                {TCA9548A_12V_ADDR, 1, RFID2_WS1850S_ADDR},
-                {TCA9548A_16V_ADDR, 2, RFID2_WS1850S_ADDR}},
+    : batteries{{config::TCA9548A_6V_ADDR, 0, config::RFID2_WS1850S_ADDR},
+                {config::TCA9548A_12V_ADDR, 1, config::RFID2_WS1850S_ADDR},
+                {config::TCA9548A_16V_ADDR, 2, config::RFID2_WS1850S_ADDR}},
       currentLEDState(LED_OFF), lastLEDState(LED_OFF), activeBattery(-1),
       systemHealthy(false), lastPollTime(0), currentPollingBattery(0) {
 
-  for (int i = 0; i < NUM_BATTERIES; i++) {
+  for (int i = 0; i < config::NUM_BATTERIES; i++) {
     lastStates[i] = {false, false, 0, 0};
   }
 }
@@ -18,30 +18,31 @@ WallBatterySystem::WallBatterySystem()
 // ========== PUBLIC METHODS ==========
 bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
   // ----- RS485 SETUP -----
-  pinMode(RS485_IO, OUTPUT);              // control pin
-  digitalWrite(RS485_IO, RS485_TRANSMIT); // set to TRANSMIT mode
+  pinMode(config::RS485_DE_PIN, OUTPUT); // control pin
+  digitalWrite(config::RS485_DE_PIN,
+               config::RS485_TRANSMIT); // set to TRANSMIT mode
 
   // ----- LED SETUP -----
-  pinMode(GREEN_LED_PIN, OUTPUT);
-  pinMode(RED_LED_PIN, OUTPUT);
-  digitalWrite(GREEN_LED_PIN, LOW);
-  digitalWrite(RED_LED_PIN, LOW);
+  pinMode(config::GREEN_LED_PIN, OUTPUT);
+  pinMode(config::RED_LED_PIN, OUTPUT);
+  digitalWrite(config::GREEN_LED_PIN, LOW);
+  digitalWrite(config::RED_LED_PIN, LOW);
 
   currentLEDState = LED_OFF;
   lastLEDState = LED_OFF;
 
   // begin RS485 Software Serial
-  Serial1.begin(RS485_BAUD_RATE);
+  Serial1.begin(config::RS485_BAUD_RATE);
 
   DEBUG_PRINT("RS485 Hardware Serial1 initialized at ");
-  DEBUG_PRINT(RS485_BAUD_RATE);
+  DEBUG_PRINT(config::RS485_BAUD_RATE);
   DEBUG_PRINTLN(" baud");
 
   DEBUG_PRINTLN("=== Jumper Cable Interactive v2 ===");
 
   // Initialize I2C
   Wire.begin();
-  Wire.setClock(100000);
+  Wire.setClock(config::I2C_CLOCK_SPEED);
 
   disableAllMuxChannels();
 
@@ -64,12 +65,12 @@ bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
 void WallBatterySystem::updateSystem(MFRC522 &reader) {
   unsigned long currentTime = millis();
 
-  if (currentTime - lastPollTime >= POLL_INTERVAL) {
+  if (currentTime - lastPollTime >= config::POLL_INTERVAL_MS) {
     // Poll only one battery per cycle (round-robin)
     batteries[currentPollingBattery].updateReaders(reader);
 
     // Move to next battery
-    currentPollingBattery = (currentPollingBattery + 1) % NUM_BATTERIES;
+    currentPollingBattery = (currentPollingBattery + 1) % config::NUM_BATTERIES;
     lastPollTime = currentTime;
   }
 }
@@ -84,7 +85,7 @@ bool WallBatterySystem::isSystemHealthy() const { return systemHealthy; }
 
 void WallBatterySystem::printSystemStatus() const {
   DEBUG_PRINTLN("\n=== SYSTEM STATUS ===");
-  for (int i = 0; i < NUM_BATTERIES; i++) {
+  for (int i = 0; i < config::NUM_BATTERIES; i++) {
     DEBUG_PRINT(batteries[i].getName());
     DEBUG_PRINT(" Battery: ");
     if (batteries[i].getPositive().getReaderStatus() &&
@@ -104,7 +105,7 @@ bool WallBatterySystem::initializeBatteries(MFRC522 &reader) {
   DEBUG_PRINTLN("\nInitializing batteries...");
   bool allBatteriesOK = true;
 
-  for (int i = 0; i < NUM_BATTERIES; i++) {
+  for (int i = 0; i < config::NUM_BATTERIES; i++) {
     DEBUG_PRINT("\n--- Initializing ");
     DEBUG_PRINT(batteries[i].getName());
     DEBUG_PRINTLN(" Battery ---");
@@ -133,7 +134,7 @@ WallBatterySystem::getCurrentBatteryState(uint8_t batteryIndex) const {
 
 // ========== COMMUNICATION ==========
 void WallBatterySystem::updateCommunication() {
-  for (int i = 0; i < NUM_BATTERIES; i++) {
+  for (int i = 0; i < config::NUM_BATTERIES; i++) {
     BatteryState currentState = getCurrentBatteryState(i);
 
     // check for any change in state
@@ -143,7 +144,7 @@ void WallBatterySystem::updateCommunication() {
 
       // only send packet if change in state has occured
       sendBatteryPacket(i, currentState);
-      delay(5);
+      delay(config::RS485_LINE_SETTLE_MS);
     }
   }
 }
@@ -151,8 +152,8 @@ void WallBatterySystem::updateCommunication() {
 void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
                                           const BatteryState &state) {
   WallStatusPacket packet = {0};
-  packet.START1 = 0xAA;
-  packet.START2 = 0x55;
+  packet.START1 = config::PACKET_START1;
+  packet.START2 = config::PACKET_START2;
   packet.BAT_ID = batteries[batteryIndex].getId();
   packet.NEG_PRESENT = state.negPresent ? 1 : 0;
   packet.NEG_STATE = state.negPolarity ? 1 : 0;
@@ -218,7 +219,7 @@ LEDState WallBatterySystem::determineLEDState() {
   activeBattery = findActiveBattery();
 
   if (activeBattery < 0) {
-    return LED_OFF; // no active battery fo0nd
+    return LED_OFF; // no active battery found
   }
 
   // check if active battery has valid configuration
@@ -227,7 +228,7 @@ LEDState WallBatterySystem::determineLEDState() {
 
 int WallBatterySystem::findActiveBattery() const {
   // find the battery with the most complete configuration
-  for (int i = 0; i < NUM_BATTERIES; i++) {
+  for (int i = 0; i < config::NUM_BATTERIES; i++) {
     bool posPresent = (batteries[i].getPositive().getTagState() == TAG_PRESENT);
     bool negPresent = (batteries[i].getNegative().getTagState() == TAG_PRESENT);
 
@@ -243,16 +244,16 @@ int WallBatterySystem::findActiveBattery() const {
 void WallBatterySystem::setLEDState(LEDState state) {
   switch (state) {
   case LED_OFF:
-    digitalWrite(GREEN_LED_PIN, LOW);
-    digitalWrite(RED_LED_PIN, LOW);
+    digitalWrite(config::GREEN_LED_PIN, LOW);
+    digitalWrite(config::RED_LED_PIN, LOW);
     break;
   case LED_GREEN:
-    digitalWrite(GREEN_LED_PIN, HIGH);
-    digitalWrite(RED_LED_PIN, LOW);
+    digitalWrite(config::GREEN_LED_PIN, HIGH);
+    digitalWrite(config::RED_LED_PIN, LOW);
     break;
   case LED_RED:
-    digitalWrite(GREEN_LED_PIN, LOW);
-    digitalWrite(RED_LED_PIN, HIGH);
+    digitalWrite(config::GREEN_LED_PIN, LOW);
+    digitalWrite(config::RED_LED_PIN, HIGH);
     break;
   }
 }
@@ -262,7 +263,7 @@ void WallBatterySystem::updateSystemHealth() {
   // System is healthy if at least one battery is fully functional
   systemHealthy = false;
 
-  for (int i = 0; i < NUM_BATTERIES; i++) {
+  for (int i = 0; i < config::NUM_BATTERIES; i++) {
     if (batteries[i].getPositive().getReaderStatus() &&
         batteries[i].getNegative().getReaderStatus()) {
       systemHealthy = true;
@@ -276,14 +277,14 @@ void WallBatterySystem::handleSystemFailure() const {
 
   // Blink red LED indefinitely
   while (1) {
-    digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
+    digitalWrite(config::RED_LED_PIN, !digitalRead(config::RED_LED_PIN));
     delay(500);
   }
 }
 
 // ========== UTILITY METHODS ==========
 void WallBatterySystem::disableAllMuxChannels() {
-  for (int i = 0; i < NUM_BATTERIES; i++) {
+  for (int i = 0; i < config::NUM_BATTERIES; i++) {
     MuxController::disableChannel(batteries[i].getMuxAddr());
   }
 }

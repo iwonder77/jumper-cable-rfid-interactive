@@ -1,4 +1,5 @@
 #include "TerminalReader.h"
+#include "Config.h"
 #include "Debug.h"
 
 void TerminalReader::initialize(MFRC522 &reader) {
@@ -22,7 +23,7 @@ void TerminalReader::initialize(MFRC522 &reader) {
   // initialize
   reader.PCD_Init();
 
-  delay(20);
+  delay(config::READER_INIT_SETTLE_MS);
 }
 
 void TerminalReader::update(MFRC522 &reader) {
@@ -60,7 +61,7 @@ void TerminalReader::update(MFRC522 &reader) {
 
     case TAG_DETECTED:
       // check if enough time has passed for debouncing
-      if (currentTime - firstSeenTime > TAG_DEBOUNCE_TIME) {
+      if (currentTime - firstSeenTime > config::TAG_DEBOUNCE_TIME) {
         tagState = TAG_PRESENT;
         DEBUG_PRINT(name);
         DEBUG_PRINTLN(": Tag confirmed present");
@@ -105,15 +106,15 @@ void TerminalReader::update(MFRC522 &reader) {
       }
     } else if (tagState == TAG_PRESENT) {
       // More lenient for established tags
-      if (consecutiveFails >= TAG_PRESENCE_THRESHOLD ||
-          (currentTime - lastSeenTime > TAG_ABSENCE_TIMEOUT)) {
+      if (consecutiveFails >= config::TAG_PRESENCE_THRESHOLD ||
+          (currentTime - lastSeenTime > config::TAG_ABSENCE_TIMEOUT)) {
         tagState = TAG_REMOVED;
         DEBUG_PRINT(name);
         DEBUG_PRINTLN(": Tag removed!");
       }
     } else if (tagState == TAG_REMOVED) {
       // Confirm removal
-      if (currentTime - lastSeenTime > TAG_ABSENCE_TIMEOUT * 2) {
+      if (currentTime - lastSeenTime > config::TAG_ABSENCE_TIMEOUT * 2) {
         tagState = TAG_ABSENT;
         clearTagData();
         DEBUG_PRINT(name);
@@ -160,7 +161,7 @@ void TerminalReader::readTagData(MFRC522 &reader) {
   byte buffer[18];
   byte bufferSize = sizeof(buffer);
 
-  if (reader.MIFARE_Read(TAG_START_READ_PAGE, buffer, &bufferSize) !=
+  if (reader.MIFARE_Read(config::TAG_START_READ_PAGE, buffer, &bufferSize) !=
       MFRC522::StatusCode::STATUS_OK) {
     DEBUG_PRINT(name);
     DEBUG_PRINTLN(": Failed to read card data");

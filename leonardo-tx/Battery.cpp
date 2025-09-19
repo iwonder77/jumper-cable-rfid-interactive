@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "Battery.h"
+#include "Config.h"
 #include "Debug.h"
 #include "MuxController.h"
 
@@ -26,13 +27,13 @@ bool Battery::testMuxCommunication() const {
 
 void Battery::initializeReaders(MFRC522 &reader) {
   // Initialize positive terminal
-  MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
-  delay(10);
+  MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
+  delay(config::CHANNEL_SWITCH_SETTLE_MS);
   positive.initialize(reader);
 
   // Initialize negative terminal
-  MuxController::selectChannel(muxAddr, NEGATIVE_TERMINAL_CHANNEL);
-  delay(10);
+  MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
+  delay(config::CHANNEL_SWITCH_SETTLE_MS);
   negative.initialize(reader);
 
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
@@ -44,14 +45,12 @@ void Battery::initializeReaders(MFRC522 &reader) {
 
 void Battery::updateReaders(MFRC522 &reader) {
   // update positive terminal
-  MuxController::selectChannel(muxAddr, POSITIVE_TERMINAL_CHANNEL);
-  delay(5);
+  MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
   reader.PCD_Init();
   positive.update(reader);
 
   // update negative terminal
-  MuxController::selectChannel(muxAddr, NEGATIVE_TERMINAL_CHANNEL);
-  delay(5);
+  MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
   reader.PCD_Init();
   negative.update(reader);
 

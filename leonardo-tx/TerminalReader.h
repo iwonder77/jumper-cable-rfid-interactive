@@ -5,7 +5,6 @@
 #include <MFRC522Debug.h>
 #include <MFRC522DriverI2C.h>
 #include <MFRC522v2.h>
-
 #include <Wire.h>
 
 enum TagState { TAG_ABSENT, TAG_DETECTED, TAG_PRESENT, TAG_REMOVED };
@@ -49,17 +48,6 @@ private:
   void readTagData(MFRC522 &reader);
   uint8_t calculateChecksum(const uint8_t *data, uint8_t length);
   bool compareUID(byte *uid1, byte *uid2, byte length);
-
-  // ---------- CONSTANTS ----------
-  static constexpr unsigned long TAG_DEBOUNCE_TIME =
-      150; // debounce time for tag detection (ms) (3 * round robin polling
-           // interval)
-  static constexpr unsigned long TAG_ABSENCE_TIMEOUT =
-      450; // time before considering tag removed (ms) (3 * tag debounce)
-  static constexpr uint8_t TAG_PRESENCE_THRESHOLD =
-      3; // consecutive reading fails before marking absent
-  static constexpr uint8_t TAG_START_READ_PAGE =
-      4; // page # to begin reading data from in Tag
 };
 
 #endif

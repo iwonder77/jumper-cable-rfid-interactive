@@ -4,18 +4,15 @@
 #include <Arduino.h>
 #include <MFRC522v2.h>
 
+#include "Config.h"
 #include "TerminalReader.h"
-
-// ----- TCA9548A I2C MUX Channels -----
-const uint8_t NEGATIVE_TERMINAL_CHANNEL = 0;
-const uint8_t POSITIVE_TERMINAL_CHANNEL = 1;
 
 class Battery {
 public:
   Battery(uint8_t muxAddr, uint8_t id, uint8_t readerAddr)
       : muxAddr(muxAddr), id(id),
-        negative(readerAddr, "Negative", NEGATIVE_TERMINAL_CHANNEL),
-        positive(readerAddr, "Positive", POSITIVE_TERMINAL_CHANNEL) {}
+        negative(readerAddr, "Negative", config::NEGATIVE_TERMINAL_CHANNEL),
+        positive(readerAddr, "Positive", config::POSITIVE_TERMINAL_CHANNEL) {}
 
   bool initialize(MFRC522 &reader);
   bool testMuxCommunication() const;

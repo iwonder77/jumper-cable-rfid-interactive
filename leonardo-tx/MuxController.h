@@ -2,7 +2,6 @@
 #define MUXCONTROLLER_H
 
 #include <Arduino.h>
-#include <Wire.h>
 
 class MuxController {
 public:
