@@ -126,10 +126,15 @@ bool WallBatterySystem::initializeBatteries(MFRC522 &reader) {
 
 BatteryState
 WallBatterySystem::getCurrentBatteryState(uint8_t batteryIndex) const {
-  return {batteries[batteryIndex].getPositive().getTagState() == TAG_PRESENT,
-          batteries[batteryIndex].getNegative().getTagState() == TAG_PRESENT,
-          batteries[batteryIndex].getPositive().polarityOK(),
-          batteries[batteryIndex].getNegative().polarityOK()};
+  bool posPresent =
+      (batteries[batteryIndex].getPositive().getTagState() == TAG_PRESENT);
+  bool negPresent =
+      (batteries[batteryIndex].getNegative().getTagState() == TAG_PRESENT);
+
+  return {
+      posPresent, negPresent,
+      posPresent ? batteries[batteryIndex].getPositive().polarityOK() : false,
+      negPresent ? batteries[batteryIndex].getNegative().polarityOK() : false};
 }
 
 // ========== COMMUNICATION ==========
