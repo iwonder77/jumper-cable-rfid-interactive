@@ -1,12 +1,15 @@
 /* 
-* ----------------------------------------------
-* PROJECT NAME: Jumper Cable RFID Interactive 
-* Description: Using more organized code and better principles in OOP to create a working and clean version of the 
-*              jumper cable + battery terminal interactive
+************************************************
+* File: leonardo-tx.ino
+* Project: Jumper Cable RFID Interactive - Leonardo (Wall Battery) Tx System 
+*
+* Description: Main sketch/entry point for the jumper cable + battery terminal interactive
+*
+* Hardware: Arduino Leonardo, TCA9548A I2C MUX, Level Converter, M5Stack WS1850S RFID2 Readers
 *
 * Author: Isai Sanchez 
-* Date: 8-19-25 
-* Board(s) Used: Arduino Nano 
+* Created: 2025-08-19 
+*
 * Libraries: 
 *   - Wire.h (I2C communication library): https://docs.arduino.cc/language-reference/en/functions/communication/wire/ 
 *   - MFRC522v2.h (Main RFID library): https://github.com/OSSLibraries/Arduino_MFRC522v2 
@@ -21,7 +24,7 @@
 *   - Also found out that the SDA/SCL lines for the RFID2 readers are at 3.3V logic level, so the multiplexer was powered with Arduino's
 *     3V3/GND pins, and since the Arduino's SDA/SCL lines are at 5V logic level, a level converter was used to communicate between 
 *     Arduino <---> RFID2 Readers
-* ----------------------------------------------
+************************************************
 */
 
 #include <Wire.h>
@@ -44,7 +47,7 @@ void setup() {
   while (!Serial);
 
   if (!wallSystem.initializeSystem(reader)) {
-    // system initialization failed - wallSystem handles error state
+    // if system initialization failed - wallSystem object handles error state
     return;
   }
 }
@@ -53,5 +56,5 @@ void setup() {
 void loop() {
   wallSystem.updateSystem(reader);
   wallSystem.processSystemLogic();
-  delay(10);
+  delay(5);
 }
