@@ -2,7 +2,7 @@
 #include "Config.h"
 #include "Debug.h"
 
-void TerminalReader::initialize(MFRC522 &reader) {
+void TerminalReader::init(MFRC522 &reader) {
   // assume channel has already been set
   DEBUG_PRINT("Testing ");
   DEBUG_PRINT(name);

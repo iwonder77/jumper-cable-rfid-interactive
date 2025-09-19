@@ -20,7 +20,7 @@ public:
   TerminalReader(uint8_t address, const char *name, uint8_t channel)
       : address(address), name(name), channel(channel) {}
 
-  void initialize(MFRC522 &reader);
+  void init(MFRC522 &reader);
   void update(MFRC522 &reader);
   void printStatus() const;
 
