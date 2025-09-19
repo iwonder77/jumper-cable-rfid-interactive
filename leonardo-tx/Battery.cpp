@@ -10,7 +10,10 @@ bool Battery::initialize(MFRC522 &reader) {
   Wire.beginTransmission(getMuxAddr());
   byte result = Wire.endTransmission();
   if (result != 0) {
+    muxCommunicationOK = false;
     return false;
+  } else {
+    muxCommunicationOK = true;
   }
 
   // ----- Initialize the RFID readers -----
