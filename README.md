@@ -33,9 +33,17 @@ Jumper Cables:
 
 ## Arduino Leonardo (Wall Battery System) Firmware
 
+### **`WallBatterySystem`** Class
+
+Coordinates all classes, handles round-robin polling of each battery, captures and updates each battery's state, communicates to Toy Car via RS485, handles system health and small UI visualization with LEDs. For future improvements I would break this class down further, but I digress man.
+
+### **`Battery`** Class
+
+Encapsulates the initialization and update of the two RFID readers per battery, ensures proper I2C communication to the MUX, and provides other handy methods for configuration status, its terminal readers' states, and more.  
+
 ### **`TerminalReader`** Class
 
-Handles updates to the state machine of the RFID readers via the `update()` method
+Handles updates to the state machine of the RFID readers via the `update()` method and reads RFID tag data with the MFRC522 library.
 
 Our four defined states are:
 1. TAG_ABSENT: No tag near the reader
