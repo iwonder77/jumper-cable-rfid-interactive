@@ -1,4 +1,5 @@
 #include "WallBatterySystem.h"
+#include "CommPacket.h"
 #include "Debug.h"
 #include "MuxController.h"
 
@@ -164,7 +165,7 @@ void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
   packet.NEG_STATE = state.negPolarity ? 1 : 0;
   packet.POS_PRESENT = state.posPresent ? 1 : 0;
   packet.POS_STATE = state.posPolarity ? 1 : 0;
-  packet.CHK = calculateChecksum(packet);
+  packet.CHK = xorChecksum(packet);
 
   Serial1.write((uint8_t *)&packet, sizeof(WallStatusPacket));
   Serial1.flush();
@@ -292,15 +293,4 @@ void WallBatterySystem::disableAllMuxChannels() {
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
     MuxController::disableChannel(batteries[i].getMuxAddr());
   }
-}
-
-uint8_t
-WallBatterySystem::calculateChecksum(const WallStatusPacket &pkt) const {
-  uint8_t sum = 0;
-  sum ^= pkt.BAT_ID;
-  sum ^= pkt.NEG_PRESENT;
-  sum ^= pkt.NEG_STATE;
-  sum ^= pkt.POS_PRESENT;
-  sum ^= pkt.POS_STATE;
-  return sum;
 }

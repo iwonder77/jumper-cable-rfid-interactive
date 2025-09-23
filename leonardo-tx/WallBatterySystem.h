@@ -24,18 +24,6 @@ struct BatteryState {
   }
 };
 
-// ----- COMMUNICATION PACKET -----
-struct __attribute__((packed)) WallStatusPacket {
-  uint8_t START1;
-  uint8_t START2;
-  uint8_t BAT_ID;
-  uint8_t NEG_PRESENT;
-  uint8_t NEG_STATE;
-  uint8_t POS_PRESENT;
-  uint8_t POS_STATE;
-  uint8_t CHK;
-};
-
 class WallBatterySystem {
 public:
   // constructor
@@ -91,7 +79,6 @@ private:
 
   // Utility
   void disableAllMuxChannels();
-  uint8_t calculateChecksum(const WallStatusPacket &pkt) const;
 };
 
 #endif
