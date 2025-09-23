@@ -4,11 +4,9 @@
 
 Source code for the jumper cable interactive exhibit that aims to teach children how to utilize jumper cables to connect a healthy battery from a **wall mounted battery system** (Arduino Leonardo) to an unhealthy **toy car battery system** (Arduino MKRZERO). The Wall Battery System detects when RFID-tagged jumper cable ends are correctly placed on the terminals of a 6V, 12V, and 16V battery, validates polarity, and communicates battery status over RS-485. The Toy Car System receives these packets, interprets the configuration, handles its own jumper cable placement/polarity detection, and provides feedback by animating the car’s lights (LED strip) and sounds (I2S). 
  
-RFID tags are embedded within the jumper cables, I wrote lighteweight data onto them using this [sketch](https://github.com/iwonder77/rw-NTAG203-rfid-tag) to differentiate between positive and negative jumper cable ends. 
+RFID tags are embedded within the jumper cables, I wrote lightweight data onto them using this [sketch](https://github.com/iwonder77/rw-NTAG203-rfid-tag) to differentiate between positive and negative jumper cable ends. 
 
 ## Hardware Components
-
-### Electronics
 
 Wall Battery System:
 -   Microcontroller: Arduino Leonardo
@@ -29,33 +27,33 @@ Toy Car System:
 Jumper Cables:
 -   RFID Tags: 4 x Adafruit's NTAG203 tags, 1 per clamp on jumper cable pair
 
-### Hardware Architecture (Schematic)
+## Hardware Architecture (Schematic)
 
 ...
 
-### Software Architecture
+## Arduino Leonardo (Wall Battery System) Firmware
 
-#### **`TerminalReader`** Class
+### **`TerminalReader`** Class
 
-`update()`: The **State Machine**
+Handles updates to the state machine of the RFID readers via the `update()` method
 
-Four defined states:
+Our four defined states are:
 1. TAG_ABSENT: No tag near the reader
 2. TAG_DETECTED: Tag found but not yet confirmed (debouncing)
 3. TAG_PRESENT: Tag confirmed and data read successfully
 4. TAG_REMOVED: Tag was present but now missing (confirming removal)
 
-2 main sections:
+The `update()` method has 2 main sections:
 1. Tag Detection Logic (when a tag IS found)
 
-In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns true, a tag has been detected. We quickly check its UID to verify if it is a new one or the same one, and update the timing variables. We then check the previous state of the reader's tag data and use a switch statement to act accordingly.
+In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns true, a tag has been detected. We quickly check its UID to determine if it is a **new** tag or the same one, and promptly update the timing variables for debouncing. We then check the previous state of the reader's tag data with a switch statement to act accordingly.
 
 TAG_ABSENT -> TAG_DETECTED: first detection of a tag, advance to "detected" state and start debounce timer
 
 ```cpp
 case TAG_ABSENT:
   tagState = TAG_DETECTED;
-  firstSeenTime = currentTime;  // Start debounce timer
+  firstSeenTime = currentTime;  // start debounce timer
   Serial.println(": New tag detected!");
 ```
 
@@ -66,10 +64,10 @@ case TAG_DETECTED:
   if (currentTime - firstSeenTime > TAG_DEBOUNCE_TIME) {
     tagState = TAG_PRESENT;
     Serial.println(": Tag confirmed present");
-    readTagData(reader);  // Actually read the tag's data
+    readTagData(reader);  // read the tag's data
   }
 ```
-TAG_PRESENT (Same Tag): if it's the same tag, do nothing, if it is a different tag, go back to TAG_DETECTED to debounce this new tag
+TAG_PRESENT (Same Tag): if it's the same tag, do nothing, if it is a different tag, go back to the TAG_DETECTED state, restart the debouncing timer, and clear the previous tag's data
 
 ```cpp
 case TAG_PRESENT:
@@ -93,7 +91,7 @@ case TAG_REMOVED:
 
 2. Absence Detection Logic (when a tag is NOT found)
 
-In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns false, then the reader did NOT detect a tag. We quickly add to the failure count and use the current state of the reader to act accordingly.
+In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns false, then the reader did NOT detect a tag. We quickly add to the failure-to-read count and use the current state of the reader to act accordingly.
 
 TAG_DETECTED -> TAG_ABSENT: if we were trying to detect a tag but it disappeared quickly, most likely we had a false positive, go straight to ABSENT
 
@@ -129,9 +127,6 @@ else if (tagState == TAG_REMOVED) {
   }
 }
 ```
-
-
-
 
 
 #### **`MuxController`** Class
