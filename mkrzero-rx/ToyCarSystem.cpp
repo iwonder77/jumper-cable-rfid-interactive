@@ -60,37 +60,32 @@ void ToyCarSystem::onPacketReceived(const WallStatusPacket &pkt) {
   bool posPresent = pkt.POS_PRESENT != 0;
   bool negOK = pkt.NEG_STATE != 0;
   bool posOK = pkt.POS_STATE != 0;
+  bool successfulConnection = (posPresent && negPresent && posOK && negOK);
 
   // TODO: this logic below for success and failure will need to change,
   // but for testing purposes lets go to the following:
 
-  // a packet that reads fully connected & both polarities correct -> success
-  if (posPresent && negPresent && posOK && negOK) {
-    // play success audio (if available)
-    audio.play(config::AUDIO_SUCCESS_FILE);
-    pulseLed(config::LED_PULSE_MS);
-    return;
+  // play audio depending on battery (6V, 12V, 16V) BUT
+  // only play audio for correct jumper cable connections
+  switch (pkt.BAT_ID) {
+  case 0:
+    if (successfulConnection) {
+      audio.play(config::SPUTTER_AUDIO_FILE);
+    }
+    break;
+  case 1:
+    if (successfulConnection) {
+      audio.play(config::ENGINE_START_AUDIO_FILE);
+    }
+    break;
+  case 2:
+    if (successfulConnection) {
+      audio.play(config::ZAP_AUDIO_FILE);
+    }
+    break;
+  default:
+    break;
   }
-
-  // If both present but polarity wrong -> failure
-  if (posPresent && negPresent && (!posOK || !negOK)) {
-    audio.play(config::AUDIO_FAIL_FILE);
-    // pulse LED twice for fail
-    pulseLed(120);
-    delay(150);
-    pulseLed(120);
-    return;
-  }
-
-  // partial attach (one clamp only) -> small feedback (idle sound or short
-  // flash)
-  if (posPresent || negPresent) {
-    // optional: play small click sound or single blink
-    pulseLed(60);
-    return;
-  }
-
-  // otherwise no clamps - nothing to do
 }
 
 void ToyCarSystem::pulseLed(uint16_t durationMs) {
