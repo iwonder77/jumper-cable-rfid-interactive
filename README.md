@@ -139,3 +139,22 @@ else if (tagState == TAG_REMOVED) {
 
 #### **`MuxController`** Class
 #### **`Battery`** Class
+
+## Toy Car System 
+ BRIDGE FUNCTION
+ because the onPacketReceived() function itself is a class member function,
+ the compiler automatically adds a hidden 'this' parameter:
+    void onPacketReceived(ToyCarSystem* this, const WallStatusPacket &pkt)
+                          ^^^^^^^^^^^^^^^^^ Hidden parameter!
+ this doesn't match the callback signature the RS485Receiver expects:
+    using PacketHandlerFn = void (*)(const WallStatusPacket &, void *context);
+
+ trust me, we could try to modify the callback signature to handle member
+ functions directly, but that would drag us into POINTER TO MEMBER FUNCTION
+ territory, which has some scary af syntax and gets complex fast.
+
+ instead, this static bridge function acts as an adapter:
+ 1. takes the standard callback parameters (pkt, ctx) 
+ 2. casts the generic 'ctx' pointer to point back to the correct ToyCarSystem type
+ 3. calls the real member function onPacketReceived on that object
+
