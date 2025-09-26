@@ -15,7 +15,6 @@ public:
         positive(readerAddr, "Positive", config::POSITIVE_TERMINAL_CHANNEL) {}
 
   bool initialize(MFRC522 &reader);
-  bool testMuxCommunication() const;
   void updateReaders(MFRC522 &reader);
   bool hasValidConfiguration() const;
   void printBatteryStatus() const;
