@@ -19,13 +19,6 @@ static constexpr uint8_t NUM_BATTERIES = 3;
 static constexpr uint16_t POLL_INTERVAL_MS =
     50; // how often to poll all battery readers for tags (ms)
 
-// ----- I2C ADDRESSES -----
-static constexpr uint8_t TCA9548A_6V_ADDR = 0x70;
-static constexpr uint8_t TCA9548A_12V_ADDR = 0x71;
-static constexpr uint8_t TCA9548A_16V_ADDR = 0x72;
-static constexpr uint8_t RFID2_WS1850S_ADDR = 0x28;
-static constexpr uint32_t I2C_CLOCK_SPEED = 100000; // 100kHz standard mode
-
 // ----- LED PINS -----
 static constexpr uint8_t GREEN_LED_PIN = 6;
 static constexpr uint8_t RED_LED_PIN = 7;
@@ -40,6 +33,13 @@ static constexpr uint32_t RS485_LINE_SETTLE_MS = 5;
 // ----- PACKET FRAMING -----
 static constexpr uint8_t PACKET_START1 = 0xAA;
 static constexpr uint8_t PACKET_START2 = 0x55;
+
+// ----- I2C ADDRESSES -----
+static constexpr uint8_t TCA9548A_6V_ADDR = 0x70;
+static constexpr uint8_t TCA9548A_12V_ADDR = 0x71;
+static constexpr uint8_t TCA9548A_16V_ADDR = 0x72;
+static constexpr uint8_t RFID2_WS1850S_ADDR = 0x28;
+static constexpr uint32_t I2C_CLOCK_SPEED = 100000; // 100kHz standard mode
 
 // ----- TCA9548A I2C MUX Channels -----
 const uint8_t NEGATIVE_TERMINAL_CHANNEL = 0;
