@@ -11,18 +11,27 @@
  * low-level parsing or audio details.
  */
 
+#include <Arduino.h>
+#include <MFRC522v2.h>
+
 #include "AudioPlayer.h"
 #include "CommPacket.h"
 #include "RS485Receiver.h"
-#include <Arduino.h>
+#include "TerminalReader.h"
 
 class ToyCarSystem {
 public:
   ToyCarSystem(HardwareSerial &serialPort);
-  bool begin();
-  void update(); // call frequently from loop()
+  bool initialize(MFRC522 &reader);
+  void update(MFRC522 &reader); // call frequently from loop()
 
 private:
+  bool muxCommunicationOK;
+  uint8_t muxAddr;
+  uint8_t id;
+  TerminalReader positive;
+  TerminalReader negative;
+  TerminalReader gnd_frame;
   RS485Receiver rs485;
   AudioPlayer audio;
 

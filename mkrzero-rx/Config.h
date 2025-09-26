@@ -35,4 +35,26 @@ static constexpr const char ENGINE_START_AUDIO_FILE[] = "12V.wav";
 static constexpr const char ZAP_AUDIO_FILE[] = "16V.wav";
 static constexpr uint8_t AUDIO_VOLUME_PERCENT = 50;
 
+// ----- I2C Addresses -----
+static constexpr uint8_t MUX_ADDR = 0x70;
+static constexpr uint8_t RFID2_WS1850S_ADDR = 0x28;
+
+// ----- TCA9548A MUX Channels -----
+const uint8_t GND_FRAME_CHANNEL = 0;
+const uint8_t NEGATIVE_TERMINAL_CHANNEL = 1;
+const uint8_t POSITIVE_TERMINAL_CHANNEL = 2;
+static constexpr uint32_t CHANNEL_SWITCH_SETTLE_MS = 5;
+
+// ----- RFID TAG/READER CONSTANTS -----
+static constexpr uint8_t READER_INIT_SETTLE_MS = 10;
+static constexpr unsigned long TAG_DEBOUNCE_TIME =
+    150; // debounce time for tag detection (ms) (3 * round robin polling
+         // interval)
+static constexpr unsigned long TAG_ABSENCE_TIMEOUT =
+    450; // time before considering tag removed (ms) (3 * tag debounce)
+static constexpr uint8_t TAG_PRESENCE_THRESHOLD =
+    3; // consecutive reading fails before marking absent
+static constexpr uint8_t TAG_START_READ_PAGE =
+    4; // page # to begin reading data from in Tag
+
 } // namespace config
