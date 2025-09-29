@@ -26,6 +26,8 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
 
+  Wire.begin();
+
   DEBUG_PRINTLN("Toy Car MKRZero starting...");
   if (!toyCar.initialize(reader)) {
     DEBUG_PRINTLN("System failed to initialize");
