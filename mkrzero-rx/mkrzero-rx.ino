@@ -24,7 +24,7 @@ ToyCarSystem toyCar(Serial1);
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial);
+  delay(100);
 
   Wire.begin();
 
