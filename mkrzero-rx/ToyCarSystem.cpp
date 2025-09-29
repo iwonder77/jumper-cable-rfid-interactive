@@ -3,6 +3,7 @@
 #include "Debug.h"
 #include "MuxController.h"
 #include <Arduino.h>
+#include <Wire.h>
 
 ToyCarSystem::ToyCarSystem(HardwareSerial &serialPort)
     : rs485(serialPort, config::RS485_DE_PIN), muxAddr(config::MUX_ADDR),
@@ -31,12 +32,15 @@ bool ToyCarSystem::initialize(MFRC522 &reader) {
   }
 
   // ----- test MUX communication -----
+  DEBUG_PRINT("Testing mux communication - ");
   Wire.beginTransmission(muxAddr);
   byte result = Wire.endTransmission();
   if (result != 0) {
+    DEBUG_PRINTLN("FAILED");
     muxCommunicationOK = false;
     return false;
   } else {
+    DEBUG_PRINTLN("SUCCESS");
     muxCommunicationOK = true;
   }
 
@@ -49,6 +53,10 @@ bool ToyCarSystem::initialize(MFRC522 &reader) {
   MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
   delay(config::CHANNEL_SWITCH_SETTLE_MS);
   negative.init(reader);
+
+  MuxController::selectChannel(muxAddr, config::GND_FRAME_CHANNEL);
+  delay(config::CHANNEL_SWITCH_SETTLE_MS);
+  gnd_frame.init(reader);
 
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
     DEBUG_PRINT("Warning: Battery ");
@@ -77,7 +85,7 @@ void ToyCarSystem::update(MFRC522 &reader) {
   // update gnd frame terminal
   MuxController::selectChannel(muxAddr, config::GND_FRAME_CHANNEL);
   reader.PCD_Init();
-  negative.update(reader);
+  gnd_frame.update(reader);
 
   MuxController::disableChannel(muxAddr);
 
