@@ -12,7 +12,7 @@ WallBatterySystem::WallBatterySystem()
       systemHealthy(false), lastPollTime(0), currentPollingBattery(0) {
 
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
-    lastStates[i] = {false, false, 0, 0};
+    lastStates[i] = {false, false, false, false};
   }
 }
 
