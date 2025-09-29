@@ -15,6 +15,10 @@ ToyCarSystem::ToyCarSystem(HardwareSerial &serialPort)
                 config::GND_FRAME_CHANNEL) {}
 
 bool ToyCarSystem::initialize(MFRC522 &reader) {
+  prevToyCarTerminalState = {false, false, false, false, false, false};
+  toyCarTerminalState = {false, false, false, false, false, false};
+  prevWallBatteryState = {0, false, false, false, false};
+  wallBatteryState = {0, false, false, false, false};
   // ----- setup LED -----
   pinMode(config::ONBOARD_LED_PIN, OUTPUT);
   digitalWrite(config::ONBOARD_LED_PIN, LOW);
@@ -58,6 +62,8 @@ bool ToyCarSystem::initialize(MFRC522 &reader) {
   delay(config::CHANNEL_SWITCH_SETTLE_MS);
   gnd_frame.init(reader);
 
+  MuxController::disableChannel(muxAddr);
+
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
     DEBUG_PRINT("Warning: Battery ");
     DEBUG_PRINT(id);
@@ -89,8 +95,51 @@ void ToyCarSystem::update(MFRC522 &reader) {
 
   MuxController::disableChannel(muxAddr);
 
-  // NOTE: we can add audio loop checks or other non-blocking tasks here
-  // e.g. handle periodic UI updates, sensors, etc.
+  toyCarTerminalState = getCurrentState();
+
+  bool stateChange = (toyCarTerminalState != prevToyCarTerminalState) ||
+                     (wallBatteryState != prevWallBatteryState);
+
+  // play audio depending on battery (6V, 12V, 16V) BUT
+  // only play audio for correct jumper cable connections on BOTH ends
+  if (stateChange) {
+    if (wallBatteryState.successfulConnection()) {
+      switch (wallBatteryState.id) {
+      case 0:
+        if ((toyCarTerminalState.posPolarity &&
+             toyCarTerminalState.framePresent) ||
+            (toyCarTerminalState.posPolarity &&
+             toyCarTerminalState.negPolarity)) {
+          if (!audio.isPlaying()) {
+            audio.play(config::SPUTTER_AUDIO_FILE);
+          }
+        }
+        break;
+      case 1:
+        if (toyCarTerminalState.posPolarity &&
+            toyCarTerminalState.framePolarity) {
+          if (!audio.isPlaying()) {
+            audio.play(config::ENGINE_START_AUDIO_FILE);
+          }
+        }
+        break;
+      case 2:
+        if ((toyCarTerminalState.posPolarity &&
+             toyCarTerminalState.framePresent) ||
+            (toyCarTerminalState.posPolarity &&
+             toyCarTerminalState.negPolarity)) {
+          if (!audio.isPlaying()) {
+            audio.play(config::ZAP_AUDIO_FILE);
+          }
+        }
+        break;
+      default:
+        break;
+      }
+    }
+    prevToyCarTerminalState = toyCarTerminalState;
+    prevWallBatteryState = wallBatteryState;
+  }
 }
 
 // BRIDGE FUNCTION
@@ -115,37 +164,27 @@ void ToyCarSystem::onPacketReceived(const WallStatusPacket &pkt) {
   DEBUG_PRINT(", POS_STATE:");
   DEBUG_PRINTLN(pkt.POS_STATE);
 
-  // decide outcome:
-  bool negPresent = pkt.NEG_PRESENT != 0;
-  bool posPresent = pkt.POS_PRESENT != 0;
-  bool negOK = pkt.NEG_STATE != 0;
-  bool posOK = pkt.POS_STATE != 0;
-  bool successfulConnection = (posPresent && negPresent && posOK && negOK);
+  // update state:
+  wallBatteryState.id = pkt.BAT_ID;
+  wallBatteryState.posPresent = pkt.POS_PRESENT;
+  wallBatteryState.negPresent = pkt.NEG_PRESENT;
+  wallBatteryState.posPolarity = pkt.POS_STATE;
+  wallBatteryState.negPolarity = pkt.NEG_STATE;
+}
 
-  // TODO: this logic below for success and failure will need to change,
-  // but for testing purposes lets go to the following:
+TerminalState ToyCarSystem::getCurrentState() const {
+  bool posPresent = (positive.getTagState() == TAG_PRESENT);
+  bool negPresent = (negative.getTagState() == TAG_PRESENT);
+  bool framePresent = (gnd_frame.getTagState() == TAG_PRESENT);
 
-  // play audio depending on battery (6V, 12V, 16V) BUT
-  // only play audio for correct jumper cable connections
-  switch (pkt.BAT_ID) {
-  case 0:
-    if (successfulConnection) {
-      audio.play(config::SPUTTER_AUDIO_FILE);
-    }
-    break;
-  case 1:
-    if (successfulConnection) {
-      audio.play(config::ENGINE_START_AUDIO_FILE);
-    }
-    break;
-  case 2:
-    if (successfulConnection) {
-      audio.play(config::ZAP_AUDIO_FILE);
-    }
-    break;
-  default:
-    break;
-  }
+  return {
+      posPresent,
+      negPresent,
+      framePresent,
+      posPresent ? positive.polarityOK() : false,
+      negPresent ? negative.polarityOK() : false,
+      framePresent ? gnd_frame.polarityOK() : false,
+  };
 }
 
 void ToyCarSystem::pulseLed(uint16_t durationMs) {

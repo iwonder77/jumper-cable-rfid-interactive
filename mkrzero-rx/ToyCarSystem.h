@@ -19,6 +19,43 @@
 #include "RS485Receiver.h"
 #include "TerminalReader.h"
 
+struct BatteryState {
+  uint8_t id;
+  bool posPresent;
+  bool negPresent;
+  bool posPolarity;
+  bool negPolarity;
+
+  // equality operator for easy comparison (used when checking previous vs
+  // current state)
+  bool operator!=(const BatteryState &other) const {
+    return posPresent != other.posPresent || negPresent != other.negPresent ||
+           posPolarity != other.posPolarity || negPolarity != other.negPolarity;
+  }
+  bool successfulConnection() const {
+    return (posPresent && posPolarity) && (negPresent && negPolarity);
+  }
+};
+
+struct TerminalState {
+  bool posPresent;
+  bool negPresent;
+  bool framePresent;
+  bool posPolarity;
+  bool negPolarity;
+  bool framePolarity;
+
+  // equality operator for easy comparison (used when checking previous vs
+  // current state)
+  bool operator!=(const TerminalState &other) const {
+    return posPresent != other.posPresent || negPresent != other.negPresent ||
+           framePresent != other.framePresent ||
+           posPolarity != other.posPolarity ||
+           negPolarity != other.negPolarity ||
+           framePolarity != other.framePolarity;
+  }
+};
+
 class ToyCarSystem {
 public:
   ToyCarSystem(HardwareSerial &serialPort);
@@ -34,6 +71,13 @@ private:
   TerminalReader gnd_frame;
   RS485Receiver rs485;
   AudioPlayer audio;
+  TerminalState prevToyCarTerminalState;
+  BatteryState prevWallBatteryState;
+  TerminalState toyCarTerminalState;
+  BatteryState wallBatteryState;
+
+  // state helper
+  TerminalState getCurrentState() const;
 
   // LED helper
   void pulseLed(uint16_t durationMs);
@@ -41,5 +85,6 @@ private:
   // packet callback glue
   // static means "not tied to any specific object"
   static void packetHandlerStatic(const WallStatusPacket &pkt, void *ctx);
+  // actual member callback function
   void onPacketReceived(const WallStatusPacket &pkt);
 };
