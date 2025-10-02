@@ -100,8 +100,8 @@ void ToyCarSystem::update(MFRC522 &reader) {
   bool stateChange = (toyCarTerminalState != prevToyCarTerminalState) ||
                      (wallBatteryState != prevWallBatteryState);
 
-  // play audio depending on battery (6V, 12V, 16V) BUT
-  // only play audio for correct jumper cable connections on BOTH ends
+  // play audio depending on battery (6V, 12V, 16V) choice and correct
+  // configuration on BOTH ends, play "wrong" sound otherwise
   if (stateChange) {
     if (wallBatteryState.successfulConnection()) {
       switch (wallBatteryState.id) {
@@ -135,6 +135,14 @@ void ToyCarSystem::update(MFRC522 &reader) {
         break;
       default:
         break;
+      }
+      if (wallBatteryState.presentConnection() &&
+          ((toyCarTerminalState.negPresent && toyCarTerminalState.posPresent) ||
+           (toyCarTerminalState.framePresent &&
+            toyCarTerminalState.posPresent))) {
+        if (!audio.isPlaying()) {
+          audio.play(config::WRONG_CHOICE_AUDIO_FILE);
+        }
       }
     }
     prevToyCarTerminalState = toyCarTerminalState;

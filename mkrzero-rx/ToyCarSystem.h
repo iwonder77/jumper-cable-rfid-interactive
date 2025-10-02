@@ -35,6 +35,7 @@ struct BatteryState {
   bool successfulConnection() const {
     return (posPresent && posPolarity) && (negPresent && negPolarity);
   }
+  bool presentConnection() const { return posPresent && negPresent; }
 };
 
 struct TerminalState {
