@@ -136,13 +136,13 @@ void ToyCarSystem::update(MFRC522 &reader) {
       default:
         break;
       }
-      if (wallBatteryState.presentConnection() &&
-          ((toyCarTerminalState.negPresent && toyCarTerminalState.posPresent) ||
-           (toyCarTerminalState.framePresent &&
-            toyCarTerminalState.posPresent))) {
-        if (!audio.isPlaying()) {
-          audio.play(config::WRONG_CHOICE_AUDIO_FILE);
-        }
+    }
+    if ((wallBatteryState.negPresent && wallBatteryState.posPresent) &&
+        ((toyCarTerminalState.negPresent && toyCarTerminalState.posPresent) ||
+         (toyCarTerminalState.framePresent &&
+          toyCarTerminalState.posPresent))) {
+      if (!audio.isPlaying()) {
+        audio.play(config::WRONG_CHOICE_AUDIO_FILE);
       }
     }
     prevToyCarTerminalState = toyCarTerminalState;
