@@ -33,6 +33,7 @@ static constexpr uint16_t LED_PULSE_MS = 200;
 static constexpr const char SPUTTER_AUDIO_FILE[] = "6V.wav";
 static constexpr const char ENGINE_START_AUDIO_FILE[] = "12V.wav";
 static constexpr const char ZAP_AUDIO_FILE[] = "16V.wav";
+static constexpr const char WRONG_CHOICE_AUDIO_FILE[] = "wrong.wav";
 static constexpr uint8_t AUDIO_VOLUME_PERCENT = 50;
 
 // ----- I2C Addresses -----
