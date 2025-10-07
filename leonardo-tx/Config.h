@@ -42,8 +42,8 @@ static constexpr uint8_t RFID2_WS1850S_ADDR = 0x28;
 static constexpr uint32_t I2C_CLOCK_SPEED = 100000; // 100kHz standard mode
 
 // ----- TCA9548A I2C MUX Channels -----
-const uint8_t NEGATIVE_TERMINAL_CHANNEL = 0;
-const uint8_t POSITIVE_TERMINAL_CHANNEL = 1;
+const uint8_t NEGATIVE_TERMINAL_CHANNEL = 1;
+const uint8_t POSITIVE_TERMINAL_CHANNEL = 2;
 static constexpr uint32_t CHANNEL_SWITCH_SETTLE_MS = 5;
 
 // ---------- RFID TAG/READER CONSTANTS ----------

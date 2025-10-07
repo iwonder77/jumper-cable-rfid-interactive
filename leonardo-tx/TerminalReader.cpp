@@ -183,7 +183,9 @@ void TerminalReader::readTagData(MFRC522 &reader) {
   tagData = data;
 
   bool isTagPos = (strncmp(data.type, "POS", 3) == 0);
-  bool isTerminalPos = (channel == 1); // positive channel is 1
+  bool isTerminalPos =
+      (channel == config::POSITIVE_TERMINAL_CHANNEL); // check if channel is
+                                                      // positive channel
   isCorrectPolarity = (isTagPos == isTerminalPos);
 
   DEBUG_PRINT(name);
