@@ -28,6 +28,26 @@ void LEDController::initialize() {
 }
 
 // ---------------------------------------------------------
+// Default exhibit animation: soft slow shimmer
+// ---------------------------------------------------------
+void LEDController::animationDefault() {
+  static uint8_t hueOffset = 0;
+  unsigned long now = millis();
+  if (now - lastFrameTime < frameIntervalMs)
+    return; // ~25 FPS
+  lastFrameTime = now;
+
+  for (int i = 0; i < numLEDs; i++) {
+    uint8_t hue = hueOffset + (i * 4); // slow hue gradient along strip
+    uint8_t brightness = sin8(i * 5 + hueOffset * 2); // gentle pulsing
+    led::leds[i] = CHSV(hue, 180, brightness);
+  }
+
+  hueOffset++; // slowly rotate color over time
+  FastLED.show();
+}
+
+// ---------------------------------------------------------
 // 6V animation: rising and falling red "energy" bar
 // ---------------------------------------------------------
 void LEDController::animation6V() {
@@ -119,6 +139,34 @@ void LEDController::animation16V() {
   for (int i = 0; i < numLEDs; i++) {
     if (led::leds[i].getAverageLight() < 10)
       led::leds[i] = CRGB(0, 0, 5);
+  }
+
+  FastLED.show();
+}
+
+// ---------------------------------------------------------
+// Wrong animation: to play for any other incorrect configuration
+// ---------------------------------------------------------
+void LEDController::animationWrong() {
+  static uint8_t pulse = 0;
+  static int8_t direction = 5;
+  unsigned long now = millis();
+  if (now - lastFrameTime < frameIntervalMs)
+    return; // ~40 FPS
+  lastFrameTime = now;
+
+  // pulse brightness between 50–255
+  pulse += direction;
+  if (pulse >= 255 || pulse <= 50)
+    direction = -direction;
+
+  // flicker some pixels brighter for intensity
+  for (int i = 0; i < numLEDs; i++) {
+    if (random8() < 10) {
+      led::leds[i] = CHSV(10, 255, 255); // bright orange flash
+    } else {
+      led::leds[i] = CHSV(0, 255, pulse); // deep red pulse
+    }
   }
 
   FastLED.show();

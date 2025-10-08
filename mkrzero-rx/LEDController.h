@@ -15,9 +15,11 @@ public:
                 uint8_t brightness = config::LED_BRIGHTNESS)
       : numLEDs(num), brightness(brightness) {};
   void initialize();
+  void animationDefault();
   void animation6V();
   void animation12V();
   void animation16V();
+  void animationWrong();
 
 private:
   uint8_t numLEDs;
@@ -25,7 +27,7 @@ private:
 
   // shared timing
   unsigned long lastFrameTime = 0;
-  const uint16_t frameIntervalMs = 25;
+  const uint16_t frameIntervalMs = config::ANIMATION_FRAME_INTERVAL_MS;
 
   // animation states
   float redBarPos = 0;
