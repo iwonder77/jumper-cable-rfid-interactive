@@ -1,2 +1,2 @@
-default_fqbn: arduino:samd:mkrzero
 default_port: /dev/cu.usbmodem11401
+default_fqbn: arduino:samd:mkrzero
