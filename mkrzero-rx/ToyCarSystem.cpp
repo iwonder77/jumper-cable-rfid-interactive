@@ -12,13 +12,14 @@ ToyCarSystem::ToyCarSystem(HardwareSerial &serialPort)
       negative(config::RFID2_WS1850S_ADDR, "Negative",
                config::NEGATIVE_TERMINAL_CHANNEL),
       gnd_frame(config::RFID2_WS1850S_ADDR, "Frame",
-                config::GND_FRAME_CHANNEL) {}
-
-bool ToyCarSystem::initialize(MFRC522 &reader) {
+                config::GND_FRAME_CHANNEL) {
   prevToyCarTerminalState = {false, false, false, false, false, false};
   toyCarTerminalState = {false, false, false, false, false, false};
   prevWallBatteryState = {0, false, false, false, false};
   wallBatteryState = {0, false, false, false, false};
+}
+
+bool ToyCarSystem::initialize(MFRC522 &reader) {
   // ----- setup LED -----
   pinMode(config::ONBOARD_LED_PIN, OUTPUT);
   digitalWrite(config::ONBOARD_LED_PIN, LOW);
@@ -70,6 +71,9 @@ bool ToyCarSystem::initialize(MFRC522 &reader) {
     DEBUG_PRINTLN(" has failed terminal(s)");
   }
 
+  // ----- Setup LED strip -----
+  ledController.initialize();
+
   DEBUG_PRINTLN("ToyCarSystem: system started");
   return true;
 }
@@ -100,11 +104,17 @@ void ToyCarSystem::update(MFRC522 &reader) {
   bool stateChange = (toyCarTerminalState != prevToyCarTerminalState) ||
                      (wallBatteryState != prevWallBatteryState);
 
-  // play audio depending on battery (6V, 12V, 16V) choice and correct
-  // configuration on BOTH ends, play "wrong" sound otherwise
+  // handle audio playing + LED strip animation logic here
+  // NOTE:
+  // - only play successful engine startup sound when 12V wall battery is
+  //  chosen (with correct configuration) and GND Frame and Positive terminal of
+  //  toy car is chosen
+  // - only play "incorrect" sound when jumper cables are placed on both
+  // terminals of one wall battery and both terminals of toy car battery
   if (stateChange) {
     if (wallBatteryState.successfulConnection()) {
       switch (wallBatteryState.id) {
+      // 6V
       case 0:
         if ((toyCarTerminalState.posPolarity &&
              toyCarTerminalState.framePresent) ||
@@ -112,6 +122,7 @@ void ToyCarSystem::update(MFRC522 &reader) {
              toyCarTerminalState.negPolarity)) {
           if (!audio.isPlaying()) {
             audio.play(config::SPUTTER_AUDIO_FILE);
+            ledController.animation6V();
           }
         }
         break;
@@ -120,6 +131,7 @@ void ToyCarSystem::update(MFRC522 &reader) {
             toyCarTerminalState.framePolarity) {
           if (!audio.isPlaying()) {
             audio.play(config::ENGINE_START_AUDIO_FILE);
+            ledController.animation12V();
           }
         }
         break;
@@ -130,6 +142,7 @@ void ToyCarSystem::update(MFRC522 &reader) {
              toyCarTerminalState.negPolarity)) {
           if (!audio.isPlaying()) {
             audio.play(config::ZAP_AUDIO_FILE);
+            ledController.animation16V();
           }
         }
         break;

@@ -16,6 +16,7 @@
 
 #include "AudioPlayer.h"
 #include "CommPacket.h"
+#include "LEDController.h"
 #include "RS485Receiver.h"
 #include "TerminalReader.h"
 
@@ -71,6 +72,7 @@ private:
   TerminalReader gnd_frame;
   RS485Receiver rs485;
   AudioPlayer audio;
+  LEDController ledController;
   TerminalState prevToyCarTerminalState;
   BatteryState prevWallBatteryState;
   TerminalState toyCarTerminalState;
