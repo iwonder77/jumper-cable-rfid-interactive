@@ -57,6 +57,8 @@ struct TerminalState {
   }
 };
 
+enum class AnimationMode { None, SixV, TwelveV, SixteenV, Wrong };
+
 class ToyCarSystem {
 public:
   ToyCarSystem(HardwareSerial &serialPort);
@@ -70,6 +72,8 @@ private:
   TerminalReader positive;
   TerminalReader negative;
   TerminalReader gnd_frame;
+  unsigned long lastRFIDCheck = 0;
+  const uint16_t rfidCheckIntervalMs = 100;
   RS485Receiver rs485;
   AudioPlayer audio;
   LEDController ledController;
@@ -77,6 +81,7 @@ private:
   BatteryState prevWallBatteryState;
   TerminalState toyCarTerminalState;
   BatteryState wallBatteryState;
+  AnimationMode mode = AnimationMode::None;
 
   // state helper
   TerminalState getCurrentState() const;

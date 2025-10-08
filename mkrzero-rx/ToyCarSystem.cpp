@@ -79,27 +79,31 @@ bool ToyCarSystem::initialize(MFRC522 &reader) {
 }
 
 void ToyCarSystem::update(MFRC522 &reader) {
+  unsigned long now = millis();
   // poll RS485 receiver to consume available bytes
   rs485.update();
 
-  // update positive terminal
-  MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
-  reader.PCD_Init();
-  positive.update(reader);
+  if (now - lastRFIDCheck >= rfidCheckIntervalMs) {
+    lastRFIDCheck = now;
+    // update positive terminal
+    MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
+    // reader.PCD_Init();
+    positive.update(reader);
 
-  // update negative terminal
-  MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
-  reader.PCD_Init();
-  negative.update(reader);
+    // update negative terminal
+    MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
+    // reader.PCD_Init();
+    negative.update(reader);
 
-  // update gnd frame terminal
-  MuxController::selectChannel(muxAddr, config::GND_FRAME_CHANNEL);
-  reader.PCD_Init();
-  gnd_frame.update(reader);
+    // update gnd frame terminal
+    MuxController::selectChannel(muxAddr, config::GND_FRAME_CHANNEL);
+    // reader.PCD_Init();
+    gnd_frame.update(reader);
 
-  MuxController::disableChannel(muxAddr);
+    MuxController::disableChannel(muxAddr);
 
-  toyCarTerminalState = getCurrentState();
+    toyCarTerminalState = getCurrentState();
+  }
 
   bool stateChange = (toyCarTerminalState != prevToyCarTerminalState) ||
                      (wallBatteryState != prevWallBatteryState);
@@ -112,6 +116,8 @@ void ToyCarSystem::update(MFRC522 &reader) {
   // - only play "incorrect" sound when jumper cables are placed on both
   // terminals of one wall battery and both terminals of toy car battery
   if (stateChange) {
+    // default animation mode to none
+    mode = AnimationMode::None;
     if (wallBatteryState.successfulConnection()) {
       switch (wallBatteryState.id) {
       // 6V
@@ -122,19 +128,21 @@ void ToyCarSystem::update(MFRC522 &reader) {
              toyCarTerminalState.negPolarity)) {
           if (!audio.isPlaying()) {
             audio.play(config::SPUTTER_AUDIO_FILE);
-            ledController.animation6V();
           }
+          mode = AnimationMode::SixV;
         }
         break;
+      // 12V
       case 1:
         if (toyCarTerminalState.posPolarity &&
             toyCarTerminalState.framePolarity) {
           if (!audio.isPlaying()) {
             audio.play(config::ENGINE_START_AUDIO_FILE);
-            ledController.animation12V();
           }
+          mode = AnimationMode::TwelveV;
         }
         break;
+        // 16V
       case 2:
         if ((toyCarTerminalState.posPolarity &&
              toyCarTerminalState.framePresent) ||
@@ -142,11 +150,9 @@ void ToyCarSystem::update(MFRC522 &reader) {
              toyCarTerminalState.negPolarity)) {
           if (!audio.isPlaying()) {
             audio.play(config::ZAP_AUDIO_FILE);
-            ledController.animation16V();
           }
+          mode = AnimationMode::SixteenV;
         }
-        break;
-      default:
         break;
       }
     }
@@ -157,9 +163,30 @@ void ToyCarSystem::update(MFRC522 &reader) {
       if (!audio.isPlaying()) {
         audio.play(config::WRONG_CHOICE_AUDIO_FILE);
       }
+      mode = AnimationMode::Wrong;
     }
     prevToyCarTerminalState = toyCarTerminalState;
     prevWallBatteryState = wallBatteryState;
+  }
+
+  switch (mode) {
+  case AnimationMode::None:
+    ledController.animationDefault();
+    break;
+  case AnimationMode::SixV:
+    ledController.animation6V();
+    break;
+  case AnimationMode::TwelveV:
+    ledController.animation12V();
+    break;
+  case AnimationMode::SixteenV:
+    ledController.animation16V();
+    break;
+  case AnimationMode::Wrong:
+    ledController.animationWrong();
+    break;
+  default:
+    break;
   }
 }
 
@@ -206,10 +233,4 @@ TerminalState ToyCarSystem::getCurrentState() const {
       negPresent ? negative.polarityOK() : false,
       framePresent ? gnd_frame.polarityOK() : false,
   };
-}
-
-void ToyCarSystem::pulseLed(uint16_t durationMs) {
-  digitalWrite(config::ONBOARD_LED_PIN, HIGH);
-  delay(durationMs);
-  digitalWrite(config::ONBOARD_LED_PIN, LOW);
 }
