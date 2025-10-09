@@ -1,12 +1,16 @@
-/**
- * main.ino
- *
- * Integrates RS-485 receiver + audio player in a single MKRZero sketch.
- * Usage:
- *   - Connect RS485 transceiver to Serial1 + DE/RE pin (config::RS485_DE_PIN).
- *   - Insert SD card with success.wav and fail.wav (or change filenames in Config.h).
- *   - Power, open Serial console for debug logs.
- */
+/* 
+************************************************
+* File: mkrzero-rx.ino
+* Project: Jumper Cable RFID Interactive - MKR Zero (Toy Car) Rx System 
+*
+* Author: Isai Sanchez
+* Created: 2025-09
+*
+* Description:  Entry point for software that'll integrate RS-485 receiver + audio player 
+*               + terminal reading + LED logic
+* Notes:
+*************************************************
+*/
 
 #include <Wire.h>
 #include <MFRC522v2.h>
