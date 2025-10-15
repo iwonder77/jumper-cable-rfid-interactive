@@ -71,8 +71,8 @@ bool ToyCarSystem::initialize(MFRC522 &reader) {
     DEBUG_PRINTLN(" has failed terminal(s)");
   }
 
-  // ----- Setup LED strip -----
-  ledController.initialize();
+  // --- send default command to led driver ---
+  ledCommander.init();
 
   DEBUG_PRINTLN("ToyCarSystem: system started");
   return true;
@@ -171,19 +171,19 @@ void ToyCarSystem::update(MFRC522 &reader) {
 
   switch (mode) {
   case AnimationMode::None:
-    ledController.animationDefault();
+    ledCommander.sendCommand(config::CMD_DEFAULT_ANIMATION);
     break;
   case AnimationMode::SixV:
-    ledController.animation6V();
+    ledCommander.sendCommand(config::CMD_6V_ANIMATION);
     break;
   case AnimationMode::TwelveV:
-    ledController.animation12V();
+    ledCommander.sendCommand(config::CMD_12V_ANIMATION);
     break;
   case AnimationMode::SixteenV:
-    ledController.animation16V();
+    ledCommander.sendCommand(config::CMD_16V_ANIMATION);
     break;
   case AnimationMode::Wrong:
-    ledController.animationWrong();
+    ledCommander.sendCommand(config::CMD_DEFAULT_ANIMATION);
     break;
   default:
     break;

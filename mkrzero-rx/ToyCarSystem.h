@@ -16,7 +16,7 @@
 
 #include "AudioPlayer.h"
 #include "CommPacket.h"
-#include "LEDController.h"
+#include "LEDCommander.h"
 #include "RS485Receiver.h"
 #include "TerminalReader.h"
 
@@ -76,7 +76,7 @@ private:
   const uint16_t rfidCheckIntervalMs = 100;
   RS485Receiver rs485;
   AudioPlayer audio;
-  LEDController ledController;
+  LEDCommander ledCommander;
   TerminalState prevToyCarTerminalState;
   BatteryState prevWallBatteryState;
   TerminalState toyCarTerminalState;
