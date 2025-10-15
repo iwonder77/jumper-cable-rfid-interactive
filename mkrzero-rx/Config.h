@@ -59,8 +59,10 @@ static constexpr uint8_t TAG_START_READ_PAGE =
     4; // page # to begin reading data from in Tag
 
 // ----- LED CONSTANTS -----
-static constexpr uint8_t LED_DATA_PIN = 6;
-const uint32_t NUM_LEDS = 56;
-const uint32_t LED_BRIGHTNESS = 10; // brightness as a percentage (%)
-static constexpr unsigned long ANIMATION_FRAME_INTERVAL_MS = 40;
+static constexpr uint8_t LED_CONTROLLER_ADDR = 0x20;
+static constexpr uint8_t CMD_6V_ANIMATION = 0x01;
+static constexpr uint8_t CMD_12V_ANIMATION = 0x02;
+static constexpr uint8_t CMD_16V_ANIMATION = 0x03;
+static constexpr uint8_t CMD_DEFAULT_ANIMATION = 0x04;
+
 } // namespace config
