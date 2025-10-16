@@ -68,7 +68,6 @@ void LEDController::stepAnimation6V() {
       (redBarDir == 1)
           ? 0.4f + (1.0f - redBarPos / float(numLEDs)) * 0.8f // slows near top
           : 0.6f + (redBarPos / float(numLEDs)) * 0.6f; // speeds near bottom
-  redBarPos += redBarDir * speed;
 
   // update position
   redBarPos += redBarDir * speed;
