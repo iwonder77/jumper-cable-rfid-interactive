@@ -82,6 +82,7 @@ private:
   TerminalState toyCarTerminalState;
   BatteryState wallBatteryState;
   AnimationMode mode = AnimationMode::None;
+  AnimationMode prevMode = AnimationMode::None;
 
   // state helper
   TerminalState getCurrentState() const;

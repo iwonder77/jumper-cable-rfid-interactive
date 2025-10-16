@@ -87,17 +87,17 @@ void ToyCarSystem::update(MFRC522 &reader) {
     lastRFIDCheck = now;
     // update positive terminal
     MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
-    // reader.PCD_Init();
+    reader.PCD_Init();
     positive.update(reader);
 
     // update negative terminal
     MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
-    // reader.PCD_Init();
+    reader.PCD_Init();
     negative.update(reader);
 
     // update gnd frame terminal
     MuxController::selectChannel(muxAddr, config::GND_FRAME_CHANNEL);
-    // reader.PCD_Init();
+    reader.PCD_Init();
     gnd_frame.update(reader);
 
     MuxController::disableChannel(muxAddr);
@@ -119,47 +119,80 @@ void ToyCarSystem::update(MFRC522 &reader) {
     // default animation mode to none
     mode = AnimationMode::None;
     if (wallBatteryState.successfulConnection()) {
+      // wall battery side has successfull connection, check which one was
+      // chosen AND check state of toy car terminals
       switch (wallBatteryState.id) {
       // 6V
       case 0:
         if ((toyCarTerminalState.posPolarity &&
-             toyCarTerminalState.framePresent) ||
+             toyCarTerminalState.framePolarity) ||
             (toyCarTerminalState.posPolarity &&
              toyCarTerminalState.negPolarity)) {
+          DEBUG_PRINTLN("6V Battery Connected!");
           if (!audio.isPlaying()) {
             audio.play(config::SPUTTER_AUDIO_FILE);
           }
           mode = AnimationMode::SixV;
+        } else if ((toyCarTerminalState.posPresent &&
+                    toyCarTerminalState.negPresent) ||
+                   (toyCarTerminalState.posPresent &&
+                    toyCarTerminalState.framePresent)) {
+          DEBUG_PRINTLN("Wrong Connection!");
+          if (!audio.isPlaying()) {
+            audio.play(config::WRONG_CHOICE_AUDIO_FILE);
+          }
+          mode = AnimationMode::Wrong;
         }
         break;
       // 12V
       case 1:
         if (toyCarTerminalState.posPolarity &&
             toyCarTerminalState.framePolarity) {
+          DEBUG_PRINTLN("12V Battery Connected!");
           if (!audio.isPlaying()) {
             audio.play(config::ENGINE_START_AUDIO_FILE);
           }
           mode = AnimationMode::TwelveV;
+        } else if ((toyCarTerminalState.posPresent &&
+                    toyCarTerminalState.negPresent) ||
+                   (toyCarTerminalState.posPresent &&
+                    toyCarTerminalState.framePresent)) {
+          DEBUG_PRINTLN("Wrong Connection!");
+          if (!audio.isPlaying()) {
+            audio.play(config::WRONG_CHOICE_AUDIO_FILE);
+          }
+          mode = AnimationMode::Wrong;
         }
         break;
         // 16V
       case 2:
         if ((toyCarTerminalState.posPolarity &&
-             toyCarTerminalState.framePresent) ||
+             toyCarTerminalState.framePolarity) ||
             (toyCarTerminalState.posPolarity &&
              toyCarTerminalState.negPolarity)) {
+          DEBUG_PRINTLN("16V Battery Connected!");
           if (!audio.isPlaying()) {
             audio.play(config::ZAP_AUDIO_FILE);
           }
           mode = AnimationMode::SixteenV;
+        } else if ((toyCarTerminalState.posPresent &&
+                    toyCarTerminalState.negPresent) ||
+                   (toyCarTerminalState.posPresent &&
+                    toyCarTerminalState.framePresent)) {
+          DEBUG_PRINTLN("Wrong Connection!");
+          if (!audio.isPlaying()) {
+            audio.play(config::WRONG_CHOICE_AUDIO_FILE);
+          }
+          mode = AnimationMode::Wrong;
         }
         break;
       }
-    }
-    if ((wallBatteryState.negPresent && wallBatteryState.posPresent) &&
-        ((toyCarTerminalState.negPresent && toyCarTerminalState.posPresent) ||
-         (toyCarTerminalState.framePresent &&
-          toyCarTerminalState.posPresent))) {
+    } else if ((wallBatteryState.negPresent && wallBatteryState.posPresent) &&
+               ((toyCarTerminalState.negPresent &&
+                 toyCarTerminalState.posPresent) ||
+                (toyCarTerminalState.framePresent &&
+                 toyCarTerminalState.posPresent))) {
+      DEBUG_PRINTLN("Wrong Connection!");
       if (!audio.isPlaying()) {
         audio.play(config::WRONG_CHOICE_AUDIO_FILE);
       }
@@ -169,24 +202,31 @@ void ToyCarSystem::update(MFRC522 &reader) {
     prevWallBatteryState = wallBatteryState;
   }
 
-  switch (mode) {
-  case AnimationMode::None:
-    ledCommander.sendCommand(config::CMD_DEFAULT_ANIMATION);
-    break;
-  case AnimationMode::SixV:
-    ledCommander.sendCommand(config::CMD_6V_ANIMATION);
-    break;
-  case AnimationMode::TwelveV:
-    ledCommander.sendCommand(config::CMD_12V_ANIMATION);
-    break;
-  case AnimationMode::SixteenV:
-    ledCommander.sendCommand(config::CMD_16V_ANIMATION);
-    break;
-  case AnimationMode::Wrong:
-    ledCommander.sendCommand(config::CMD_DEFAULT_ANIMATION);
-    break;
-  default:
-    break;
+  // only send I2C command for animation when the animation mode CHANGES
+  if (prevMode != mode) {
+    // free the i2c bus
+    MuxController::disableChannel(muxAddr);
+    delay(5);
+    switch (mode) {
+    case AnimationMode::None:
+      ledCommander.sendCommand(config::CMD_DEFAULT_ANIMATION);
+      break;
+    case AnimationMode::SixV:
+      ledCommander.sendCommand(config::CMD_6V_ANIMATION);
+      break;
+    case AnimationMode::TwelveV:
+      ledCommander.sendCommand(config::CMD_12V_ANIMATION);
+      break;
+    case AnimationMode::SixteenV:
+      ledCommander.sendCommand(config::CMD_16V_ANIMATION);
+      break;
+    case AnimationMode::Wrong:
+      ledCommander.sendCommand(config::CMD_DEFAULT_ANIMATION);
+      break;
+    default:
+      break;
+    }
+    prevMode = mode;
   }
 }
 
