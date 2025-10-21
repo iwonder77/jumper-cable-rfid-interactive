@@ -13,7 +13,7 @@ unsigned long animationEndTimestamp = 0;
 void receiveEvent(int numBytes) {
   if (numBytes <= 0) return;
   uint8_t cmd = Wire.read();
-  if (cmd == config::CMD_6V_ANIMATION || cmd == config::CMD_12V_ANIMATION || cmd == config::CMD_16V_ANIMATION) {
+  if (cmd == config::CMD_6V_ANIMATION || cmd == config::CMD_12V_ANIMATION || cmd == config::CMD_16V_ANIMATION || cmd == config::CMD_WRONG_ANIMATION) {
     currentAnimation = cmd;
     gotNewCommand = true;
   } else if (cmd == config::CMD_DEFAULT_ANIMATION) {
