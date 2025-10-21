@@ -25,5 +25,6 @@ static constexpr uint8_t CMD_6V_ANIMATION = 0x01;
 static constexpr uint8_t CMD_12V_ANIMATION = 0x02;
 static constexpr uint8_t CMD_16V_ANIMATION = 0x03;
 static constexpr uint8_t CMD_DEFAULT_ANIMATION = 0x04;
+static constexpr uint8_t CMD_WRONG_ANIMATION = 0x05;
 
 } // namespace config
