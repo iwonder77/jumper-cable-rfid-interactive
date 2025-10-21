@@ -22,6 +22,7 @@ private:
   void stepAnimation6V();
   void stepAnimation12V();
   void stepAnimation16V();
+  void stepAnimationWrong();
   void stepAnimationDefault();
 
   uint8_t numLEDs;
@@ -36,6 +37,7 @@ private:
   float redBarPos = 0.0f;
   int8_t redBarDir = 1;
   uint8_t electronOffset = 0;
+  float hue = 0.0f;
 };
 
 #endif
