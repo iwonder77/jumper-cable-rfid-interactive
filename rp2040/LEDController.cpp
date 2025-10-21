@@ -50,6 +50,9 @@ void LEDController::update(uint8_t animationMode) {
   case config::CMD_DEFAULT_ANIMATION:
     stepAnimationDefault();
     break;
+  case config::CMD_WRONG_ANIMATION:
+    stepAnimationWrong();
+    break;
   }
 
   FastLED.show();
@@ -59,20 +62,17 @@ void LEDController::update(uint8_t animationMode) {
 // 6V animation: rising and falling red "energy" bar
 // ---------------------------------------------------------
 void LEDController::stepAnimation6V() {
-  // clear the strip first
-  fill_solid(led::leds, numLEDs, CRGB::Black);
+  fill_solid(led::leds, config::NUM_LEDS, CRGB::Black);
 
-  // how far up the strip the bar can travel
-  const int maxPos = numLEDs / 2;
-  float speed =
-      (redBarDir == 1)
-          ? 0.4f + (1.0f - redBarPos / float(numLEDs)) * 0.8f // slows near top
-          : 0.6f + (redBarPos / float(numLEDs)) * 0.6f; // speeds near bottom
+  const int maxPos = config::NUM_LEDS / 2;
+  float speed = (redBarDir == 1)
+                    ? 0.1f + (1.0f - redBarPos / float(config::NUM_LEDS)) *
+                                 0.2f // slows near top
+                    : 0.3f + (redBarPos / float(config::NUM_LEDS)) *
+                                 0.4f; // speeds near bottom
 
-  // update position
   redBarPos += redBarDir * speed;
 
-  // reverse direction at limits
   if (redBarPos >= maxPos) {
     redBarPos = maxPos;
     redBarDir = -1;
@@ -81,19 +81,13 @@ void LEDController::stepAnimation6V() {
     redBarDir = 1;
   }
 
-  // bar grows from bottom (0) to current position
   int barTop = int(redBarPos);
-
-  // light up the red bar from 0 to barTop
-  for (int i = 0; i <= barTop; i++) {
-    if (i < numLEDs) {
-      led::leds[i] = CRGB::Red;
-    }
+  for (int i = 0; i <= barTop && i < config::NUM_LEDS; i++) {
+    led::leds[i] = CRGB::Red;
   }
 
-  // optionally add a subtle trailing glow at the top
-  if (barTop + 1 < numLEDs) {
-    led::leds[barTop + 1] = CRGB(64, 0, 0); // dim red glow
+  if (barTop + 1 < config::NUM_LEDS) {
+    led::leds[barTop + 1] = CRGB(64, 0, 0);
   }
 }
 
@@ -143,27 +137,37 @@ void LEDController::stepAnimation16V() {
 }
 
 // ---------------------------------------------------------
+// Wrong animation: full strip glows red
+// ---------------------------------------------------------
+void LEDController::stepAnimationWrong() {
+  unsigned long now = millis();
+
+  // breathing effect using sine wave
+  // adjust the divisor (100.0) to control breathing speed: higher = slower
+  float breathe = (sin8(now / 200.0 * PI) + 1.0) / 2.0; // 0.0 to 1.0
+
+  // map to brightness range (50-255 for a nice glow, never fully off)
+  uint8_t brightness = 50 + (breathe * 205);
+
+  // Fill strip with red at calculated brightness
+  fill_solid(led::leds, config::NUM_LEDS, CRGB::Red);
+  fadeToBlackBy(led::leds, config::NUM_LEDS, 255 - brightness);
+
+  FastLED.show();
+}
+
+// ---------------------------------------------------------
 // Default animation
 // ---------------------------------------------------------
 void LEDController::stepAnimationDefault() {
-  // Time-based wave (slow breathing pattern)
-  float t = millis() / 2000.0f; // slow oscillation (~1 cycle every 2 seconds)
-  uint8_t breath =
-      (sin8(int(t * 255)) / 2) + 128; // 128–255 range for gentle breathing
+  unsigned long now = millis();
 
-  // Slowly shifting hue between orange and red
-  uint8_t hue =
-      8 + sin8(int(t * 80)) / 16; // oscillates slightly around red-orange
+  // clear green strip in default mode
+  fill_solid(led::leds, config::NUM_LEDS, CRGB::Black);
 
-  // Fill the strip with a uniform warm tone
-  fill_solid(led::leds, numLEDs, CHSV(hue, 200, breath));
+  // rainbow effect on red strip
+  fill_solid(led::leds, config::NUM_LEDS, CHSV(hue, 80, 180));
+  hue += 0.5; // Increment hue for rainbow cycling
 
-  // Add a faint wandering highlight pixel for a bit of motion
-  static uint8_t wander = 0;
-  wander += 1;
-  int pos = map(sin8(wander), 0, 255, 0, numLEDs - 1);
-  led::leds[pos] += CHSV(hue - 8, 150, 255);
-
-  // Gentle fade so the highlight blends naturally
-  fadeToBlackBy(led::leds, numLEDs, 5);
+  FastLED.show();
 }
