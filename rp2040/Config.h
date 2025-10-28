@@ -13,7 +13,7 @@
 #include <Arduino.h>
 
 namespace config {
-static constexpr uint16_t NUM_LEDS = 56;
+static constexpr uint16_t NUM_LEDS = 70;
 static constexpr uint8_t LED_DATA_PIN = D1;
 static constexpr uint16_t LED_BRIGHTNESS = 10; // as a percentage (%)
 static constexpr unsigned long ANIMATION_DURATION_MS = 5000; // 5 seconds
