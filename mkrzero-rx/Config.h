@@ -14,7 +14,7 @@
 
 namespace config {
 // ----- RS-485 COMM -----
-static constexpr uint8_t RS485_DE_PIN = 5;
+static constexpr uint8_t RS485_DE_PIN = 6;
 static constexpr uint8_t RS485_TX_ENABLE = HIGH;
 static constexpr uint8_t RS485_RX_ENABLE = LOW;
 static constexpr uint32_t RS485_BAUD_RATE = 9600;
@@ -58,11 +58,12 @@ static constexpr uint8_t TAG_PRESENCE_THRESHOLD =
 static constexpr uint8_t TAG_START_READ_PAGE =
     4; // page # to begin reading data from in Tag
 
-// ----- LED CONSTANTS -----
+// ----- LED DRIVER (rp2040) CONSTANTS -----
 static constexpr uint8_t LED_CONTROLLER_ADDR = 0x20;
 static constexpr uint8_t CMD_6V_ANIMATION = 0x01;
 static constexpr uint8_t CMD_12V_ANIMATION = 0x02;
 static constexpr uint8_t CMD_16V_ANIMATION = 0x03;
 static constexpr uint8_t CMD_DEFAULT_ANIMATION = 0x04;
+static constexpr uint8_t CMD_WRONG_ANIMATION = 0x05;
 
 } // namespace config
