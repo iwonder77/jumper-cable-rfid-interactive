@@ -36,7 +36,7 @@ private:
   const int maxRedBarPos = numLEDs / 2;
   float redBarPos = 0.0f;
   int8_t redBarDir = 1;
-  uint8_t electronOffset = 0;
+  int8_t electronOffset = 0;
   float hue = 0.0f;
 };
 

@@ -99,7 +99,7 @@ void LEDController::stepAnimation12V() {
     uint8_t wave = sin8(i * 10 + electronOffset);
     led::leds[i] = CHSV(96, 255, wave); // green hue
   }
-  electronOffset += 4;
+  electronOffset -= 4;
 }
 
 // ---------------------------------------------------------
