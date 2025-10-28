@@ -221,7 +221,7 @@ void ToyCarSystem::update(MFRC522 &reader) {
       ledCommander.sendCommand(config::CMD_16V_ANIMATION);
       break;
     case AnimationMode::Wrong:
-      ledCommander.sendCommand(config::CMD_DEFAULT_ANIMATION);
+      ledCommander.sendCommand(config::CMD_WRONG_ANIMATION);
       break;
     default:
       break;
