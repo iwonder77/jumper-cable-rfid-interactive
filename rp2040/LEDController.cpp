@@ -142,18 +142,18 @@ void LEDController::stepAnimation16V() {
 void LEDController::stepAnimationWrong() {
   unsigned long now = millis();
 
-  // breathing effect using sine wave
-  // adjust the divisor (100.0) to control breathing speed: higher = slower
-  float breathe = (sin8(now / 200.0 * PI) + 1.0) / 2.0; // 0.0 to 1.0
+  // Slower breathing cycle: one full cycle about every 3 seconds
+  float t = now / 3000.0f; // adjust denominator for slower/faster breathing
 
-  // map to brightness range (50-255 for a nice glow, never fully off)
-  uint8_t brightness = 50 + (breathe * 205);
+  // Compute smooth sine wave brightness between 0.0–1.0
+  float breathe = (sin(t * TWO_PI) + 1.0f) / 2.0f; // range 0–1
 
-  // Fill strip with red at calculated brightness
+  // Map to brightness range (e.g., 40–255 for soft breathing)
+  uint8_t brightness = 40 + (uint8_t)(breathe * 215);
+
+  // Fill strip with red at the current brightness
   fill_solid(led::leds, config::NUM_LEDS, CRGB::Red);
   fadeToBlackBy(led::leds, config::NUM_LEDS, 255 - brightness);
-
-  FastLED.show();
 }
 
 // ---------------------------------------------------------
