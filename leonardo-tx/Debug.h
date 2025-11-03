@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEBUG_LEVEL 1 // 0 = none, 1 = debugging mode (use serial monitor)
+#define DEBUG_LEVEL 0 // 0 = none, 1 = debugging mode (use serial monitor)
 
 // Error-level messages (always more important)
 #if DEBUG_LEVEL >= 1
