@@ -31,6 +31,7 @@
 #include <MFRC522v2.h>
 #include <MFRC522DriverI2C.h>
 #include <MFRC522Debug.h>
+#include <avr/wdt.h>
 
 #include "WallBatterySystem.h"
 #include "Config.h"
@@ -44,6 +45,7 @@ WallBatterySystem wallSystem;
 
 // ========== SETUP ==========
 void setup() {
+  wdt_enable(WDTO_4S);  // 4-second watchdog timeout
   Serial.begin(9600);
   delay(10);
 
@@ -55,6 +57,7 @@ void setup() {
 
 // ========== MAIN LOOP ==========
 void loop() {
+  wdt_reset();  // pat watchdog (reset timer)
   wallSystem.updateSystem(reader);
   wallSystem.processSystemLogic();
   delay(5);
