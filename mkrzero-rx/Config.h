@@ -30,11 +30,12 @@ static constexpr uint8_t ONBOARD_LED_PIN = 32;
 static constexpr uint16_t LED_PULSE_MS = 200;
 
 // ----- AUDIO -----
-static constexpr const char SPUTTER_AUDIO_FILE[] = "6V.wav";
-static constexpr const char ENGINE_START_AUDIO_FILE[] = "12V.wav";
-static constexpr const char ZAP_AUDIO_FILE[] = "16V.wav";
-static constexpr const char WRONG_CHOICE_AUDIO_FILE[] = "wrong.wav";
-static constexpr uint8_t AUDIO_VOLUME_PERCENT = 50;
+static constexpr const uint8_t SPUTTER_AUDIO_TRIGGER = 2;      // 6V
+static constexpr const uint8_t ENGINE_START_AUDIO_TRIGGER = 3; // 12V
+static constexpr const uint8_t ZAP_AUDIO_TRIGGER = 4;          // 16V
+static constexpr const uint8_t WRONG_CHOICE_AUDIO_TRIGGER = 5;
+static constexpr unsigned long PULSE_SEND_TIME_MS = 100;
+// static constexpr uint8_t AUDIO_VOLUME_PERCENT = 50;
 
 // ----- I2C Addresses -----
 static constexpr uint8_t MUX_ADDR = 0x70;

@@ -1,59 +1,70 @@
 #include "AudioPlayer.h"
 #include "Config.h"
 #include "Debug.h"
+#include "api/Common.h"
 
-AudioPlayer::AudioPlayer() : initialized(false), currentFile("") {}
+AudioPlayer::AudioPlayer() {}
 
 bool AudioPlayer::begin() {
-  if (!SD.begin()) {
-    DEBUG_PRINTLN("AudioPlayer: SD begin failed");
-    initialized = false;
-    return false;
-  }
+  pinMode(config::SPUTTER_AUDIO_TRIGGER, OUTPUT);
+  pinMode(config::ENGINE_START_AUDIO_TRIGGER, OUTPUT);
+  pinMode(config::ZAP_AUDIO_TRIGGER, OUTPUT);
+  pinMode(config::WRONG_CHOICE_AUDIO_TRIGGER, OUTPUT);
 
-  AudioOutI2S.volume(config::AUDIO_VOLUME_PERCENT);
-  initialized = true;
+  delay(10);
+
+  digitalWrite(config::SPUTTER_AUDIO_TRIGGER, LOW);
+  digitalWrite(config::ENGINE_START_AUDIO_TRIGGER, LOW);
+  digitalWrite(config::ZAP_AUDIO_TRIGGER, LOW);
+  digitalWrite(config::WRONG_CHOICE_AUDIO_TRIGGER, LOW);
+
+  delay(10);
+
   DEBUG_PRINTLN("AudioPlayer: initialized (SD + I2S)");
   return true;
 }
 
-bool AudioPlayer::play(const char *filename) {
-  if (!initialized) {
-    DEBUG_PRINTLN("AudioPlayer: not initialized, cannot play");
-    return false;
-  }
-
-  if (!filename) {
-    DEBUG_PRINTLN("AudioPlayer: null filename");
-    return false;
-  }
-
-  currentFile = filename;
-
-  // create SDWaveFile instance and store in member (must outlive
-  // AudioOutI2S.play)
-  waveFile = SDWaveFile(currentFile.c_str());
-  if (!waveFile) {
-    DEBUG_PRINT("AudioPlayer: wave file invalid: ");
-    DEBUG_PRINTLN(currentFile);
-    return false;
-  }
-
-  if (!AudioOutI2S.canPlay(waveFile)) {
-    DEBUG_PRINT("AudioPlayer: cannot play file format: ");
-    DEBUG_PRINTLN(currentFile);
-    return false;
+void AudioPlayer::play(uint8_t triggerPin) {
+  if (isPlaying) {
+    DEBUG_PRINTLN("AudioPlayer: currently playing, cannot play");
+    return;
   }
 
   DEBUG_PRINT("AudioPlayer: playing ");
-  DEBUG_PRINTLN(currentFile);
-  AudioOutI2S.play(waveFile);
-  return true;
+  switch (triggerPin) {
+  case (config::SPUTTER_AUDIO_TRIGGER):
+    DEBUG_PRINTLN("6V sputter audio");
+    break;
+  case (config::ENGINE_START_AUDIO_TRIGGER):
+    DEBUG_PRINTLN("12V engine start audio");
+    break;
+  case (config::ZAP_AUDIO_TRIGGER):
+    DEBUG_PRINTLN("16V zap audio");
+    break;
+  case (config::WRONG_CHOICE_AUDIO_TRIGGER):
+    DEBUG_PRINTLN("Wrong choice audio");
+    break;
+  default:
+    break;
+  }
+
+  digitalWrite(triggerPin, HIGH);
+  isPlaying = true;
+  playStartTime = millis();
+
+  return;
 }
 
-void AudioPlayer::stop() {
-  AudioOutI2S.stop();
-  DEBUG_PRINTLN("AudioPlayer: stopped");
+void AudioPlayer::update() {
+  if (isPlaying) {
+    if (millis() - playStartTime > config::PULSE_SEND_TIME_MS) {
+      digitalWrite(config::SPUTTER_AUDIO_TRIGGER, LOW);
+      digitalWrite(config::ENGINE_START_AUDIO_TRIGGER, LOW);
+      digitalWrite(config::ZAP_AUDIO_TRIGGER, LOW);
+      digitalWrite(config::WRONG_CHOICE_AUDIO_TRIGGER, LOW);
+      isPlaying = false;
+      playStartTime = 0;
+    }
+  }
+  return;
 }
-
-bool AudioPlayer::isPlaying() const { return AudioOutI2S.isPlaying(); }
