@@ -30,10 +30,10 @@ static constexpr uint8_t ONBOARD_LED_PIN = 32;
 static constexpr uint16_t LED_PULSE_MS = 200;
 
 // ----- AUDIO -----
-static constexpr const uint8_t SPUTTER_AUDIO_TRIGGER = 2;      // 6V
-static constexpr const uint8_t ENGINE_START_AUDIO_TRIGGER = 3; // 12V
-static constexpr const uint8_t ZAP_AUDIO_TRIGGER = 4;          // 16V
-static constexpr const uint8_t WRONG_CHOICE_AUDIO_TRIGGER = 5;
+static constexpr const uint8_t SPUTTER_AUDIO_TRIGGER = 5;      // 6V
+static constexpr const uint8_t ENGINE_START_AUDIO_TRIGGER = 4; // 12V
+static constexpr const uint8_t ZAP_AUDIO_TRIGGER = 3;          // 16V
+static constexpr const uint8_t WRONG_CHOICE_AUDIO_TRIGGER = 2;
 static constexpr unsigned long PULSE_SEND_TIME_MS = 100;
 // static constexpr uint8_t AUDIO_VOLUME_PERCENT = 50;
 
