@@ -16,6 +16,7 @@
 #include <MFRC522v2.h>
 #include <MFRC522DriverI2C.h>
 #include <MFRC522Debug.h>
+#include <Adafruit_SleepyDog.h>
 
 #include "ToyCarSystem.h"
 #include "Debug.h"
@@ -38,9 +39,12 @@ void setup() {
     DEBUG_PRINTLN("System failed to initialize");
     while (1);
   }
+
+  int wdtTimeout = Watchdog.enable(4000);
 }
 
 void loop() {
   toyCar.update(reader);
   // keep loop free for quick responses (no heavy blocking)
+  Watchdog.reset();
 }

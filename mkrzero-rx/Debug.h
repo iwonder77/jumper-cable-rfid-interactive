@@ -8,7 +8,7 @@
  * Note: On MKRZero Serial refers to the USB CDC serial port used for logs.
  */
 
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 0
 
 #if DEBUG_LEVEL >= 1
 #define DEBUG_PRINT(x) Serial.print(x)
