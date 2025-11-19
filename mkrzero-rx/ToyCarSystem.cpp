@@ -129,18 +129,14 @@ void ToyCarSystem::update(MFRC522 &reader) {
             (toyCarTerminalState.posPolarity &&
              toyCarTerminalState.negPolarity)) {
           DEBUG_PRINTLN("6V Battery Connected!");
-          if (!audio.isPlaying()) {
-            audio.play(config::SPUTTER_AUDIO_FILE);
-          }
+          audio.play(config::SPUTTER_AUDIO_TRIGGER);
           mode = AnimationMode::SixV;
         } else if ((toyCarTerminalState.posPresent &&
                     toyCarTerminalState.negPresent) ||
                    (toyCarTerminalState.posPresent &&
                     toyCarTerminalState.framePresent)) {
           DEBUG_PRINTLN("Wrong Connection!");
-          if (!audio.isPlaying()) {
-            audio.play(config::WRONG_CHOICE_AUDIO_FILE);
-          }
+          audio.play(config::WRONG_CHOICE_AUDIO_TRIGGER);
           mode = AnimationMode::Wrong;
         }
         break;
@@ -149,18 +145,14 @@ void ToyCarSystem::update(MFRC522 &reader) {
         if (toyCarTerminalState.posPolarity &&
             toyCarTerminalState.framePolarity) {
           DEBUG_PRINTLN("12V Battery Connected!");
-          if (!audio.isPlaying()) {
-            audio.play(config::ENGINE_START_AUDIO_FILE);
-          }
+          audio.play(config::ENGINE_START_AUDIO_TRIGGER);
           mode = AnimationMode::TwelveV;
         } else if ((toyCarTerminalState.posPresent &&
                     toyCarTerminalState.negPresent) ||
                    (toyCarTerminalState.posPresent &&
                     toyCarTerminalState.framePresent)) {
           DEBUG_PRINTLN("Wrong Connection!");
-          if (!audio.isPlaying()) {
-            audio.play(config::WRONG_CHOICE_AUDIO_FILE);
-          }
+          audio.play(config::WRONG_CHOICE_AUDIO_TRIGGER);
           mode = AnimationMode::Wrong;
         }
         break;
@@ -171,18 +163,14 @@ void ToyCarSystem::update(MFRC522 &reader) {
             (toyCarTerminalState.posPolarity &&
              toyCarTerminalState.negPolarity)) {
           DEBUG_PRINTLN("16V Battery Connected!");
-          if (!audio.isPlaying()) {
-            audio.play(config::ZAP_AUDIO_FILE);
-          }
+          audio.play(config::ZAP_AUDIO_TRIGGER);
           mode = AnimationMode::SixteenV;
         } else if ((toyCarTerminalState.posPresent &&
                     toyCarTerminalState.negPresent) ||
                    (toyCarTerminalState.posPresent &&
                     toyCarTerminalState.framePresent)) {
           DEBUG_PRINTLN("Wrong Connection!");
-          if (!audio.isPlaying()) {
-            audio.play(config::WRONG_CHOICE_AUDIO_FILE);
-          }
+          audio.play(config::WRONG_CHOICE_AUDIO_TRIGGER);
           mode = AnimationMode::Wrong;
         }
         break;
@@ -193,14 +181,13 @@ void ToyCarSystem::update(MFRC522 &reader) {
                 (toyCarTerminalState.framePresent &&
                  toyCarTerminalState.posPresent))) {
       DEBUG_PRINTLN("Wrong Connection!");
-      if (!audio.isPlaying()) {
-        audio.play(config::WRONG_CHOICE_AUDIO_FILE);
-      }
+      audio.play(config::WRONG_CHOICE_AUDIO_TRIGGER);
       mode = AnimationMode::Wrong;
     }
     prevToyCarTerminalState = toyCarTerminalState;
     prevWallBatteryState = wallBatteryState;
   }
+  audio.update();
 
   // only send I2C command for animation when the animation mode CHANGES
   if (prevMode != mode) {
