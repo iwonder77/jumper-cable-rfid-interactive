@@ -151,29 +151,35 @@ else if (tagState == TAG_REMOVED) {
 
 #### **`MuxController`** Class
 
-Simple and isolated Mux helpers for switching and disabling channels.
+Simple and isolated i2c mux helpers for switching and disabling channels.
 
-### Toy Car System
+#### Other
+
+- Config.h: configuration constants, don't know how to share one file across projects just yet so make sure this file is the same in every sub-directory
+- CommPacket.h: centralized communication packet structure and checksum logic, also keep this identical in every sub-directory
+- Debug.h: nice little debug file for serial print statements
+
+### Arduino MKR Zero (Toy Car System)
 
 #### **`ToyCarSystem`** Class
 
-BRIDGE FUNCTION
-because the onPacketReceived() function itself is a class member function,
-the compiler automatically adds a hidden 'this' parameter:
-void onPacketReceived(ToyCarSystem* this, const WallStatusPacket &pkt)
-^^^^^^^^^^^^^^^^^ Hidden parameter!
-this doesn't match the callback signature the RS485Receiver expects:
-using PacketHandlerFn = void (*)(const WallStatusPacket &, void \*context);
+Coordinates all classes, handles RFID reader polling, sends animation commands to rp2040 via I2C, sends HIGH pulse signals to DY-HL30T to trigger sounds. Receives RS485 data packets from Wall Battery and sets states accordingly.
 
-trust me, we could try to modify the callback signature to handle member
-functions directly, but that would drag us into POINTER TO MEMBER FUNCTION
-territory, which has some scary af syntax and gets complex fast.
+#### **`TerminalReader`** Class
 
-instead, this static bridge function acts as an adapter:
+Identical to Wall Battery System's `TerminalReader` class
 
-1.  takes the standard callback parameters (pkt, ctx)
-2.  casts the generic 'ctx' pointer to point back to the correct ToyCarSystem type
-3.  calls the real member function onPacketReceived on that object
+#### **`RS485Receiver`** Class
+
+Centralized rs485 logic. Takes care of hardware serial initialization, de/re pin configuration, consumes incoming bytes, validates and creates packets, and hands the packets off to the handler callback function for ToyCarSystem to use.
+
+#### **`LEDCommander`** Class
+
+Lightweight helper class to handle sending animation commands to rp2040 via I2C.
+
+#### **`AudioPlayer`** Class
+
+Previously centralized i2s logic and sd card initialization, but now simply sends high pulses to DY-HL30T to trigger sounds. Ensures enough time has passed during HIGH signal duration, and no active HIGH signals are being sent (busy line).
 
 ## Maintenance Notes
 
