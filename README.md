@@ -35,6 +35,10 @@ Jumper Cables:
 
 ## Software Architecture
 
+### Behavior Summary
+
+Two systems that handle their own battery and terminal configuration by polling RFID readers in a round-robin approach. RS485 communication is unidirectional from the wall battery system to the toy car, where the main LED strip and sound playback logic lie. State machines defined for seamless and predictable transitions.
+
 ### Arduino Leonardo (Wall Battery System)
 
 #### **`WallBatterySystem`** Class
@@ -149,10 +153,6 @@ else if (tagState == TAG_REMOVED) {
 
 Simple and isolated Mux helpers for switching and disabling channels.
 
-#### **`Battery`** Class
-
-Responsible for initialization and polling of two RFID readers, determines presence of tags and polarity configuration.
-
 ### Toy Car System
 
 #### **`ToyCarSystem`** Class
@@ -174,3 +174,9 @@ instead, this static bridge function acts as an adapter:
 1.  takes the standard callback parameters (pkt, ctx)
 2.  casts the generic 'ctx' pointer to point back to the correct ToyCarSystem type
 3.  calls the real member function onPacketReceived on that object
+
+## Maintenance Notes
+
+- 11/02/2025: far too many power supplies feeding off of one outlet, toy car system now feeds off its own outlet
+- 11/12/2025: replaced 12V-5V step down converter with LM2596 based module
+- 11/18/2025: switched from an i2s audio system to a simpler trigger based system using a DY-HL30T module
