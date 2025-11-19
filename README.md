@@ -2,30 +2,33 @@
 
 ## Project Overview
 
-Source code for the jumper cable interactive exhibit that aims to teach children how to utilize jumper cables to connect a healthy battery from a **wall mounted battery system** (Arduino Leonardo) to an unhealthy **toy car battery system** (Arduino MKRZERO). The Wall Battery System detects when RFID-tagged jumper cable ends are correctly placed on the terminals of a 6V, 12V, and 16V battery, validates polarity, and communicates battery status over RS-485. The Toy Car System receives these packets, interprets the configuration, handles its own jumper cable placement/polarity detection, and provides feedback by animating the car’s lights (LED strip) and sounds (I2S). 
- 
-RFID tags are embedded within the jumper cables, I wrote lightweight data onto them using this [sketch](https://github.com/iwonder77/rw-NTAG203-rfid-tag) to differentiate between positive and negative jumper cable ends. 
+Source code for the jumper cable interactive exhibit that aims to teach children how to utilize jumper cables to connect a healthy battery from a **wall mounted battery system** (Arduino Leonardo) to an unhealthy **toy car battery system** (Arduino MKRZERO). The Wall Battery System detects when RFID-tagged jumper cable ends are correctly placed on the terminals of a 6V, 12V, and 16V battery, validates polarity, and communicates battery status over RS-485. The Toy Car System receives these packets, interprets the configuration, handles its own jumper cable placement/polarity detection, and provides feedback by animating the engine bay’s lights (LED strip + rp2040) and playing sounds on a 4 Ohm 50W rated speaker using a high level, trigger-based DY-HL30T sound module.
+
+RFID tags are embedded within the jumper cables, I wrote lightweight data onto them using this [sketch](https://github.com/iwonder77/rw-NTAG203-rfid-tag) to differentiate between positive and negative jumper cable ends.
 
 ## Hardware Components
 
 Wall Battery System:
--   Microcontroller: Arduino Leonardo
--   RFID Readers: 6 x RFID2 WS1850S M5Stack readers (fixed I2C address of 0x28) - 2 per battery
--   I2C Multiplexer: 3 x Adafruit's TCA9548A 8 Channel I2C Multiplexer (variable I2C address of 0x70, 0x71, and 0x72) - 1 per battery
--   Level Converter: 1 x 5V -> 3V3 Level Converter to allow Leonardo's 5V I2C lines to work with RFID2 reader's 3V3 level I2C lines
--   Status LEDs: Green (correct polarity configuration) and Red (incorrect polarity configuration) indicators
+
+- Microcontroller: Arduino Leonardo
+- RFID Readers: 6 x RFID2 WS1850S M5Stack readers (fixed I2C address of 0x28) - 2 per battery
+- I2C Multiplexer: 3 x Adafruit's TCA9548A 8 Channel I2C Multiplexer (variable I2C address of 0x70, 0x71, and 0x72) - 1 per battery
+- Level Converter: 1 x 5V -> 3V3 Level Converter to allow Leonardo's 5V I2C lines to work with RFID2 reader's 3V3 level I2C lines
+- Status LEDs: Green (correct polarity configuration) and Red (incorrect polarity configuration) indicators
 
 Toy Car System:
--   Microcontroller: Arduino MKRZERO
--   RFID Readers: 3 x RFID2 WS1850S M5Stack readers (fixed I2C address of 0x28) - 2 on the unhealthy battery and 1 on the car frame to represent GND
--   I2C Multiplexer: 1 x Adafruit's TCA9548A 8 Channel I2C Multiplexer (variable I2C address of 0x70, 0x71, and 0x72)
--   I2S DAC: 1 x Adafruit's PCM5102 I2S DAC for .wav sound data on sd card
--   Amp: 1 x Adafruit's MAX9744 Class D Amplifier 
--   Speaker: 1 x 4 Ohm 50 W Visatron Speaker
--   LEDs: integration soon to come...
+
+- Microcontroller: Arduino MKRZERO
+- RFID Readers: 3 x RFID2 WS1850S M5Stack readers (fixed I2C address of 0x28) - 2 on the unhealthy battery and 1 on the car frame to represent GND
+- I2C Multiplexer: 1 x Adafruit's TCA9548A 8 Channel I2C Multiplexer (variable I2C address of 0x70, 0x71, and 0x72)
+- I2S DAC: 1 x Adafruit's PCM5102 I2S DAC for .wav sound data on sd card
+- Amp: 1 x Adafruit's MAX9744 Class D Amplifier
+- Speaker: 1 x 4 Ohm 50 W Visatron Speaker
+- LEDs: integration soon to come...
 
 Jumper Cables:
--   RFID Tags: 4 x Adafruit's NTAG203 tags, 1 per clamp on jumper cable pair
+
+- RFID Tags: 4 x Adafruit's NTAG203 tags, 1 per clamp on jumper cable pair
 
 ## Hardware Architecture (Schematic)
 
@@ -39,19 +42,21 @@ Coordinates all classes, handles round-robin polling of each battery, captures a
 
 ### **`Battery`** Class
 
-Encapsulates the initialization and update of the two RFID readers per battery, ensures proper I2C communication to the MUX, and provides other handy methods for configuration status, its terminal readers' states, and more.  
+Encapsulates the initialization and update of the two RFID readers per battery, ensures proper I2C communication to the MUX, and provides other handy methods for configuration status, its terminal readers' states, and more.
 
 ### **`TerminalReader`** Class
 
 Handles updates to the state machine of the RFID readers via the `update()` method and reads RFID tag data with the MFRC522 library.
 
 Our four defined states are:
+
 1. TAG_ABSENT: No tag near the reader
 2. TAG_DETECTED: Tag found but not yet confirmed (debouncing)
 3. TAG_PRESENT: Tag confirmed and data read successfully
 4. TAG_REMOVED: Tag was present but now missing (confirming removal)
 
 The `update()` method has 2 main sections:
+
 1. Tag Detection Logic (when a tag IS found)
 
 In the case that `reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()` returns true, a tag has been detected. We quickly check its UID to determine if it is a **new** tag or the same one, and promptly update the timing variables for debouncing. We then check the previous state of the reader's tag data with a switch statement to act accordingly.
@@ -75,6 +80,7 @@ case TAG_DETECTED:
     readTagData(reader);  // read the tag's data
   }
 ```
+
 TAG_PRESENT (Same Tag): if it's the same tag, do nothing, if it is a different tag, go back to the TAG_DETECTED state, restart the debouncing timer, and clear the previous tag's data
 
 ```cpp
@@ -88,6 +94,7 @@ case TAG_PRESENT:
   // otherwise same tag still present - no action needed
   break;
 ```
+
 TAG_REMOVED -> TAG_DETECTED: a tag that was removed has come back (or a new one appeared), start fresh new detection
 
 ```cpp
@@ -112,6 +119,7 @@ if (tagState == TAG_DETECTED) {
   }
 }
 ```
+
 TAG_PRESENT -> TAG_REMOVED: for an already established tag, we're more lenient, it needs to fail 3 times OR be gone for 1 second before we consider it "removed" (to prevent brief disconnections from resetting everything)
 
 ```cpp
@@ -136,25 +144,26 @@ else if (tagState == TAG_REMOVED) {
 }
 ```
 
-
 #### **`MuxController`** Class
+
 #### **`Battery`** Class
 
-## Toy Car System 
- BRIDGE FUNCTION
- because the onPacketReceived() function itself is a class member function,
- the compiler automatically adds a hidden 'this' parameter:
-    void onPacketReceived(ToyCarSystem* this, const WallStatusPacket &pkt)
-                          ^^^^^^^^^^^^^^^^^ Hidden parameter!
- this doesn't match the callback signature the RS485Receiver expects:
-    using PacketHandlerFn = void (*)(const WallStatusPacket &, void *context);
+## Toy Car System
 
- trust me, we could try to modify the callback signature to handle member
- functions directly, but that would drag us into POINTER TO MEMBER FUNCTION
- territory, which has some scary af syntax and gets complex fast.
+BRIDGE FUNCTION
+because the onPacketReceived() function itself is a class member function,
+the compiler automatically adds a hidden 'this' parameter:
+void onPacketReceived(ToyCarSystem* this, const WallStatusPacket &pkt)
+^^^^^^^^^^^^^^^^^ Hidden parameter!
+this doesn't match the callback signature the RS485Receiver expects:
+using PacketHandlerFn = void (*)(const WallStatusPacket &, void \*context);
 
- instead, this static bridge function acts as an adapter:
- 1. takes the standard callback parameters (pkt, ctx) 
- 2. casts the generic 'ctx' pointer to point back to the correct ToyCarSystem type
- 3. calls the real member function onPacketReceived on that object
+trust me, we could try to modify the callback signature to handle member
+functions directly, but that would drag us into POINTER TO MEMBER FUNCTION
+territory, which has some scary af syntax and gets complex fast.
 
+instead, this static bridge function acts as an adapter:
+
+1.  takes the standard callback parameters (pkt, ctx)
+2.  casts the generic 'ctx' pointer to point back to the correct ToyCarSystem type
+3.  calls the real member function onPacketReceived on that object
