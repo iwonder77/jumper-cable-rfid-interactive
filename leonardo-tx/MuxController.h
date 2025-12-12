@@ -1,6 +1,9 @@
-#ifndef MUXCONTROLLER_H
-#define MUXCONTROLLER_H
-
+#pragma once
+/**
+ * MuxController.h
+ *
+ * Centralized logic for switching channels on I2C mux
+ */
 #include <Arduino.h>
 
 #include "Config.h"
@@ -25,5 +28,3 @@ public:
     delay(config::CHANNEL_SWITCH_SETTLE_MS);
   }
 };
-
-#endif
