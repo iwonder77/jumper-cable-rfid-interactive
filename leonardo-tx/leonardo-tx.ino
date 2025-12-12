@@ -1,17 +1,12 @@
-/* 
-************************************************
+/** 
+* Interactive: Jumper Cable Toy Car
 * File: leonardo-tx.ino
-* Project: Jumper Cable RFID Interactive - Leonardo (Wall Battery) Tx System 
-*
-* Description: Main sketch/entry point for the jumper cable + battery terminal interactive
-*
-* Hardware: Arduino Leonardo, TCA9548A I2C MUX, Level Converter, M5Stack WS1850S RFID2 Readers
+* Description: entry point for the Wall Battery system in the Jumper Cable Toy Car interactive  
 *
 * Author: Isai Sanchez 
-* Created: 2025-08-19 
-*
+* Date: 08-19-2025 
+* Board used: Arduino Leonardo
 * Libraries: 
-*   - Wire.h (I2C communication library): https://docs.arduino.cc/language-reference/en/functions/communication/wire/ 
 *   - MFRC522v2.h (Main RFID library): https://github.com/OSSLibraries/Arduino_MFRC522v2 
 *
 * Notes: 
@@ -24,7 +19,8 @@
 *   - Also found out that the SDA/SCL lines for the RFID2 readers are at 3.3V logic level, so the multiplexer was powered with Arduino's
 *     3V3/GND pins, and since the Arduino's SDA/SCL lines are at 5V logic level, a level converter was used to communicate between 
 *     Arduino <---> RFID2 Readers
-************************************************
+*
+* (c) Thanksgiving Point Exhibits Electronics Team — 2025
 */
 
 #include <Wire.h>
@@ -43,7 +39,6 @@ MFRC522 reader{ driver };
 // ----- WALL BATTERY SYSTEM INSTANCE -----
 WallBatterySystem wallSystem;
 
-// ========== SETUP ==========
 void setup() {
   wdt_enable(WDTO_4S);  // 4-second watchdog timeout
   Serial.begin(9600);
@@ -55,7 +50,6 @@ void setup() {
   }
 }
 
-// ========== MAIN LOOP ==========
 void loop() {
   wdt_reset();  // pat watchdog (reset timer)
   wallSystem.updateSystem(reader);
