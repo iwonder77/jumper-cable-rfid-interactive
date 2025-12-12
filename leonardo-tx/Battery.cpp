@@ -5,6 +5,11 @@
 #include "Debug.h"
 #include "MuxController.h"
 
+/*
+ * @brief Initializes both terminal readers
+ *
+ * @return Successful initialization
+ */
 bool Battery::initialize(MFRC522 &reader) {
   // Test MUX communication first
   Wire.beginTransmission(getMuxAddr());
@@ -37,6 +42,11 @@ bool Battery::initialize(MFRC522 &reader) {
   return (positive.getReaderStatus() && negative.getReaderStatus());
 }
 
+/*
+ * @brief Updates both positive and negative readers
+ *
+ * @param reader MFRC522 rfid reader object
+ */
 void Battery::updateReaders(MFRC522 &reader) {
   // update positive terminal
   MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
@@ -51,6 +61,12 @@ void Battery::updateReaders(MFRC522 &reader) {
   MuxController::disableChannel(muxAddr);
 }
 
+/*
+ * @brief Determines whether, if both readers detect a tag, polarity of jumper
+ * cable tags is correct
+ *
+ * @return True if configuration is correct, false otherwise
+ */
 bool Battery::hasValidConfiguration() const {
   // both terminals must have tags in PRESENT state
   if (positive.getTagState() != TAG_PRESENT ||
@@ -69,6 +85,10 @@ bool Battery::hasValidConfiguration() const {
          (posID == 2 && negID == 3) || (posID == 1 && negID == 4);
 }
 
+/*
+ * @brief Debugging prints for the configuration status of the battery and its
+ * terminals
+ */
 void Battery::printBatteryStatus() const {
   DEBUG_PRINTLN("--- Configuration Status ---");
 
@@ -81,6 +101,10 @@ void Battery::printBatteryStatus() const {
   DEBUG_PRINTLN("----------------------------");
 }
 
+/*
+ * @brief Helper function for printing important init information during setup
+ * phase
+ */
 void Battery::printInitializationSummary() const {
   DEBUG_PRINT(getName());
   DEBUG_PRINT(" Wall Battery: MUX=");
@@ -91,6 +115,9 @@ void Battery::printInitializationSummary() const {
   DEBUG_PRINTLN(negative.getReaderStatus() ? "OK" : "FAILED");
 }
 
+/*
+ * @brief Helper function for mapping battery ID to battery type
+ */
 const char *Battery::getName() const {
   switch (id) {
   case 0:

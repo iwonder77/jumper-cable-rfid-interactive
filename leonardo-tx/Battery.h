@@ -1,5 +1,13 @@
-#ifndef BATTERY_H
-#define BATTERY_H
+#pragma once
+/**
+ * Battery.h
+ *
+ * Centralized class for each battery on the wall
+ * - Each `Battery` will coordinate its own two terminal readers (positive and
+ * negative)
+ * - Provides helper functions for retrieving reader instances and valid
+ * configurations if tags present
+ */
 
 #include <Arduino.h>
 #include <MFRC522v2.h>
@@ -33,4 +41,3 @@ private:
   TerminalReader positive;
   TerminalReader negative;
 };
-#endif
