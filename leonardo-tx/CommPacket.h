@@ -6,7 +6,7 @@
  * (receiver). Centralized here so both sides use identical framing & checksum.
  *
  * NOTE: Keep this identical to the MKRZero's packet definition. I tried making
- * this a global file for both projects but that was a little difficult to do
+ * this a global file for both projects to use but I ran into some obstacles
  */
 
 #include <Arduino.h>
