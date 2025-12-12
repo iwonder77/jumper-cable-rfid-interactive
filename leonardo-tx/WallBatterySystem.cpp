@@ -3,7 +3,9 @@
 #include "Debug.h"
 #include "MuxController.h"
 
-// ========== CONSTRUCTOR ==========
+/*
+ * @brief Constructor
+ */
 WallBatterySystem::WallBatterySystem()
     : batteries{{config::TCA9548A_6V_ADDR, 0, config::RFID2_WS1850S_ADDR},
                 {config::TCA9548A_12V_ADDR, 1, config::RFID2_WS1850S_ADDR},
@@ -16,7 +18,11 @@ WallBatterySystem::WallBatterySystem()
   }
 }
 
-// ========== PUBLIC METHODS ==========
+/*
+ * @brief initializes hardware
+ *
+ * @param reader MFRC522 rfid reader object
+ */
 bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
   // ----- RS485 SETUP -----
   pinMode(config::RS485_DE_PIN, OUTPUT); // control pin
@@ -63,6 +69,11 @@ bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
   return true;
 }
 
+/*
+ * @brief Updates system's internal members at a certain sample interval
+ *
+ * @param reader MFRC522 rfid reader object
+ */
 void WallBatterySystem::updateSystem(MFRC522 &reader) {
   unsigned long currentTime = millis();
 
@@ -76,14 +87,18 @@ void WallBatterySystem::updateSystem(MFRC522 &reader) {
   }
 }
 
+/*
+ * @brief Processes internal members and executes logic accordingly
+ */
 void WallBatterySystem::processSystemLogic() {
   updateCommunication();
   updateLEDs();
   updateSystemHealth();
 }
 
-bool WallBatterySystem::isSystemHealthy() const { return systemHealthy; }
-
+/*
+ * @brief Prints complete system status
+ */
 void WallBatterySystem::printSystemStatus() const {
   DEBUG_PRINTLN("\n=== SYSTEM STATUS ===");
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
@@ -101,7 +116,12 @@ void WallBatterySystem::printSystemStatus() const {
   DEBUG_PRINTLN("=====================");
 }
 
-// ========== BATTERY MANAGEMENT ==========
+/*
+ * @brief Initializes each of the wall batteries
+ *
+ * @param reader MFRC522 rfid reader object
+ * @return successful initialization of all wall batteries
+ */
 bool WallBatterySystem::initializeBatteries(MFRC522 &reader) {
   DEBUG_PRINTLN("\nInitializing batteries...");
   bool allBatteriesOK = true;
@@ -125,6 +145,12 @@ bool WallBatterySystem::initializeBatteries(MFRC522 &reader) {
   return allBatteriesOK;
 }
 
+/*
+ * @brief Retrieves the state of any battery
+ *
+ * @param batteryIndex index of battery to retrieve state from
+ * @return battery state's `BatteryState` struct
+ */
 BatteryState
 WallBatterySystem::getCurrentBatteryState(uint8_t batteryIndex) const {
   bool posPresent =
@@ -138,7 +164,10 @@ WallBatterySystem::getCurrentBatteryState(uint8_t batteryIndex) const {
       negPresent ? batteries[batteryIndex].getNegative().polarityOK() : false};
 }
 
-// ========== COMMUNICATION ==========
+/*
+ * @brief Updates communication to Toy Car System whenever a battery's state
+ * changes
+ */
 void WallBatterySystem::updateCommunication() {
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
     BatteryState currentState = getCurrentBatteryState(i);
@@ -155,6 +184,13 @@ void WallBatterySystem::updateCommunication() {
   }
 }
 
+/*
+ * @brief Constructs data packet to be sent, then sends it to Toy Car system via
+ * RS485
+ *
+ * @param batteryIndex Index of battery of battery we are sending packet of
+ * @param state Direct reference to the battery's state
+ */
 void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
                                           const BatteryState &state) {
   WallStatusPacket packet = {0};
@@ -185,7 +221,9 @@ void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
   DEBUG_PRINTLN(packet.POS_STATE);
 }
 
-// ========== LED CONTROL ==========
+/*
+ * @brief Controls which LED to light up, if any, based on battery state
+ */
 void WallBatterySystem::updateLEDs() {
   LEDState newState = determineLEDState();
 
@@ -219,9 +257,13 @@ void WallBatterySystem::updateLEDs() {
   currentLEDState = newState;
 }
 
+/*
+ * @brief Determines the state of an active battery, if any. An active
+ * battery is any battery with tags present on both terminals
+ *
+ * @return LED state enum
+ */
 LEDState WallBatterySystem::determineLEDState() {
-  // LED State is determined by active battery, if any
-  // active battery is any battery with tags present on both terminals
   activeBattery = findActiveBattery();
 
   if (activeBattery < 0) {
@@ -232,6 +274,12 @@ LEDState WallBatterySystem::determineLEDState() {
   return batteries[activeBattery].hasValidConfiguration() ? LED_GREEN : LED_RED;
 }
 
+/*
+ * @brief Searches through internal battery members and uses their methods to
+ * determine if any of them are active
+ *
+ * @return int corresponding to index of battery that is currently active
+ */
 int WallBatterySystem::findActiveBattery() const {
   // find the battery with the most complete configuration
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
@@ -247,6 +295,9 @@ int WallBatterySystem::findActiveBattery() const {
   return -1; // No active battery
 }
 
+/*
+ * @brief Sets the state of the LED
+ */
 void WallBatterySystem::setLEDState(LEDState state) {
   switch (state) {
   case LED_OFF:
@@ -264,7 +315,9 @@ void WallBatterySystem::setLEDState(LEDState state) {
   }
 }
 
-// ========== SYSTEM HEALTH ==========
+/*
+ * @brief Handles system health monitoring
+ */
 void WallBatterySystem::updateSystemHealth() {
   // System is healthy if at least one battery is fully functional
   systemHealthy = false;
@@ -278,6 +331,9 @@ void WallBatterySystem::updateSystemHealth() {
   }
 }
 
+/*
+ * @brief Handles system failure
+ */
 void WallBatterySystem::handleSystemFailure() const {
   DEBUG_PRINTLN("\nSystem initialization failed! Check wiring.");
 
@@ -288,7 +344,9 @@ void WallBatterySystem::handleSystemFailure() const {
   }
 }
 
-// ========== UTILITY METHODS ==========
+/*
+ * @brief Utility function for diabling all mux channels
+ */
 void WallBatterySystem::disableAllMuxChannels() {
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
     MuxController::disableChannel(batteries[i].getMuxAddr());

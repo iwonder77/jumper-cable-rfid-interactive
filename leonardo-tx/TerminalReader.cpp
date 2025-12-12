@@ -2,6 +2,11 @@
 #include "Config.h"
 #include "Debug.h"
 
+/*
+ * @brief Initializes I2C communication with RFID reader
+ *
+ * @param reader MFRC522 rfid reader object
+ */
 void TerminalReader::init(MFRC522 &reader) {
   // assume channel has already been set
   DEBUG_PRINT("Testing ");
@@ -26,6 +31,12 @@ void TerminalReader::init(MFRC522 &reader) {
   delay(config::READER_INIT_SETTLE_MS);
 }
 
+/*
+ * @brief Detects tag first, reads tag data and updates tag state
+ * machine accordingly, also handles absence detection
+ *
+ * @param reader MFRC522 rfid reader object
+ */
 void TerminalReader::update(MFRC522 &reader) {
   if (!isReaderOK)
     return;
@@ -124,6 +135,9 @@ void TerminalReader::update(MFRC522 &reader) {
   }
 }
 
+/*
+ * @brief Debugging output for tag states
+ */
 void TerminalReader::printStatus() const {
   switch (tagState) {
   case TAG_ABSENT:
@@ -144,6 +158,10 @@ void TerminalReader::printStatus() const {
   }
 }
 
+/*
+ * @brief Clears tag data struct and uid member handled by TerminalReader
+ * instance
+ */
 void TerminalReader::clearTagData() {
   isCorrectPolarity = false;
   memset(&tagData, 0, sizeof(tagData));
@@ -151,6 +169,12 @@ void TerminalReader::clearTagData() {
   memset(lastUID, 0, sizeof(lastUID));
 }
 
+/*
+ * @brief Reads tag data, ensures checksum matches, and modifies
+ * internal tag data struct accordingly
+ *
+ * @param reader MFRC522 rfid reader object
+ */
 void TerminalReader::readTagData(MFRC522 &reader) {
   if (!isReaderOK || tagState != TAG_PRESENT)
     return;
@@ -206,7 +230,9 @@ void TerminalReader::readTagData(MFRC522 &reader) {
   reader.PCD_StopCrypto1();
 }
 
-// ========== UTILITY FUNCTIONS ==========
+/*
+ * @brief Utility function for calculating checksum
+ */
 uint8_t TerminalReader::calculateChecksum(const uint8_t *data, uint8_t length) {
   uint8_t sum = 0;
   for (uint8_t i = 0; i < length; i++) {
@@ -215,6 +241,9 @@ uint8_t TerminalReader::calculateChecksum(const uint8_t *data, uint8_t length) {
   return sum;
 }
 
+/*
+ * @brief Utility function for comparing uid's
+ */
 bool TerminalReader::compareUID(byte *uid1, byte *uid2, byte length) {
   return memcmp(uid1, uid2, length) == 0;
 }

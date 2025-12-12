@@ -1,5 +1,13 @@
-#ifndef WALLBATTERYSYSTEM_H
-#define WALLBATTERYSYSTEM_H
+#pragma once
+/**
+ * WallBatterySystem.h
+ *
+ * Coordinator for all classes and main loop
+ * - hardware initialization
+ * - basic LED state machine for visualizing correct polarity
+ * - system health monitoring
+ * - RS485 communication logic (should probably move to own class)
+ */
 
 #include <Arduino.h>
 #include <MFRC522v2.h>
@@ -35,7 +43,7 @@ public:
   void processSystemLogic();
 
   // system status
-  bool isSystemHealthy() const;
+  bool isSystemHealthy() const { return systemHealthy; };
   void printSystemStatus() const;
 
   // hardware setup helpers
@@ -80,5 +88,3 @@ private:
   // Utility
   void disableAllMuxChannels();
 };
-
-#endif

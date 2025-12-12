@@ -1,5 +1,13 @@
-#ifndef TERMINALREADER_H
-#define TERMINALREADER_H
+#pragma once
+/**
+ * TerminalReader.h
+ *
+ * complete RFID reader class for battery terminals, includes:
+ * - hardware initialization
+ * - struct for RFID tag data
+ * - RFID tag state machine for seamless user experience
+ * - comprehensive tag reading function readTagData()
+ */
 
 #include <Arduino.h>
 #include <MFRC522Debug.h>
@@ -49,5 +57,3 @@ private:
   uint8_t calculateChecksum(const uint8_t *data, uint8_t length);
   bool compareUID(byte *uid1, byte *uid2, byte length);
 };
-
-#endif
