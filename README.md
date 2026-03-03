@@ -1,5 +1,7 @@
 # Jumper Cable RFID Battery Interactive
 
+![demo video](https://www.youtube.com/watch?v=0h-xKJ9KRtY)
+
 ## Overview
 
 Source code for the jumper cable interactive firmware in Thanksgiving Point's Auto Shop Kidopolis exhibit. Aims to teach children how to utilize jumper cables to connect a healthy battery from a **wall mounted battery system** (Arduino Leonardo) to an unhealthy **toy car battery system** (Arduino MKRZERO). The Wall Battery System detects when RFID-tagged jumper cable ends are correctly placed on the terminals of a 6V, 12V, and 16V battery, validates polarity, and communicates battery status over RS-485. The Toy Car System receives these packets, interprets the configuration, handles its own jumper cable placement/polarity detection, and provides feedback by animating the engine bay’s lights (LED strip + rp2040) and playing sounds on a 4 Ohm 50W rated speaker using a high level, trigger-based DY-HL30T sound module.
