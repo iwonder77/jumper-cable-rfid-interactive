@@ -41,8 +41,6 @@ Jumper Cables:
 
 ![toy car schematic](docs/toy_car.png)
 
-...coming soon...
-
 ## Software Architecture
 
 ### Behavior Summary
