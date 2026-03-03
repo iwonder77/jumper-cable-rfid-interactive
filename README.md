@@ -1,6 +1,6 @@
 # Jumper Cable RFID Battery Interactive
 
-![demo video](https://www.youtube.com/watch?v=0h-xKJ9KRtY)
+[![demo video](https://www.youtube.com/watch?v=0h-xKJ9KRtY/0.jpg)](https://www.youtube.com/watch?v=0h-xKJ9KRtY)
 
 ## Overview
 
