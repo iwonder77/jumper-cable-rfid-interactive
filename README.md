@@ -1,14 +1,12 @@
 # Jumper Cable RFID Battery Interactive
 
-[![Watch the video here](https://img.youtube.com/vi/0h-xKJ9KRtY/maxresdefault.jpg)](https://www.youtube.com/watch?v=0h-xKJ9KRtY)
-
 ## Overview
 
-Source code for the jumper cable interactive firmware in the Auto Shop Kidopolis exhibit located at Thanksgiving Point's Museum of Natural Curiosity! The interactive aims to teach kids how to utilize jumper cables to jumpstart a car. Guests are able to connect the cables from a selection of healthy batteries, labeled 6V, 12V, and 16V, to an unhealthy toy car battery. The **Wall Battery System** detects the placement of RFID-tagged jumper cables, and whether the polarities are correctly placed on the terminals of a 6V, 12V, and 16V battery. It then communicates this battery status over RS-485. The **Toy Car System** receives these packets, interprets the configuration, handles its own jumper cable placement/polarity detection, and provides user feedback by animating the engine bay’s lights (LED strip + rp2040) and playing sounds on a 4 Ohm 50W rated speaker using a high level, trigger-based DY-HL30T sound module.
+Source code for the jumper cable interactive firmware in Thanksgiving Point's Auto Shop Kidopolis exhibit. Aims to teach children how to utilize jumper cables to connect a healthy battery from a **wall mounted battery system** (Arduino Leonardo) to an unhealthy **toy car battery system** (Arduino MKRZERO). The Wall Battery System detects when RFID-tagged jumper cable ends are correctly placed on the terminals of a 6V, 12V, and 16V battery, validates polarity, and communicates battery status over RS-485. The Toy Car System receives these packets, interprets the configuration, handles its own jumper cable placement/polarity detection, and provides feedback by animating the engine bay’s lights (LED strip + rp2040) and playing sounds on a 4 Ohm 50W rated speaker using a high level, trigger-based DY-HL30T sound module.
 
 RFID tags are embedded within the jumper cables, I wrote lightweight data onto them using this [sketch](https://github.com/iwonder77/rw-NTAG203-rfid-tag) to differentiate between positive and negative jumper cable ends.
 
-## Hardware Components
+## Hardware
 
 Wall Battery System:
 
@@ -31,13 +29,23 @@ Jumper Cables:
 
 - **RFID Tags**: 4 x Adafruit's NTAG203 tags, 1 per clamp on jumper cable pair
 
-## Hardware Architecture (Schematic)
+## Wiring Diagram
 
-...working on it, stay tuned...
+### Wall Batteries
+
+![wall batteries schematic](docs/wall_batteries.png)
+
+### Toy Car
+
+![toy car schematic](docs/toy_car.png)
+
+...coming soon...
 
 ## Software Architecture
 
-The two systems handle their own battery and terminal configuration by polling RFID readers in a round-robin approach. RS485 communication is unidirectional from the wall battery system to the toy car, where the main LED strip and sound playback logic lie. State machine logic reside in both systems for seamless and predictable transitions.
+### Behavior Summary
+
+Two systems that handle their own battery and terminal configuration by polling RFID readers in a round-robin approach. RS485 communication is unidirectional from the wall battery system to the toy car, where the main LED strip and sound playback logic lie. State machines defined for seamless and predictable transitions.
 
 ### Arduino Leonardo (Wall Battery System)
 
@@ -163,23 +171,25 @@ Simple and isolated i2c mux helpers for switching and disabling channels.
 
 #### **`ToyCarSystem`** Class
 
-Coordinates all classes, handles RFID reader polling, sends animation commands to rp2040 via I2C, sends HIGH pulse signals to DY-HL30T to trigger sounds. Receives RS485 data packets from Wall Battery and sets states accordingly.
+Coordinates all classes, handles round-robin polling of each terminal, sends animation commands to
 
-#### **`TerminalReader`** Class
+BRIDGE FUNCTION
+because the onPacketReceived() function itself is a class member function,
+the compiler automatically adds a hidden 'this' parameter:
+void onPacketReceived(ToyCarSystem* this, const WallStatusPacket &pkt)
+^^^^^^^^^^^^^^^^^ Hidden parameter!
+this doesn't match the callback signature the RS485Receiver expects:
+using PacketHandlerFn = void (*)(const WallStatusPacket &, void \*context);
 
-Identical to Wall Battery System's `TerminalReader` class
+trust me, we could try to modify the callback signature to handle member
+functions directly, but that would drag us into POINTER TO MEMBER FUNCTION
+territory, which has some scary af syntax and gets complex fast.
 
-#### **`RS485Receiver`** Class
+instead, this static bridge function acts as an adapter:
 
-Centralized rs485 logic. Takes care of hardware serial initialization, de/re pin configuration, consumes incoming bytes, validates and creates packets, and hands the packets off to the handler callback function for ToyCarSystem to use.
-
-#### **`LEDCommander`** Class
-
-Lightweight helper class to handle sending animation commands to rp2040 via I2C.
-
-#### **`AudioPlayer`** Class
-
-Previously centralized i2s logic and sd card initialization, but now simply sends high pulses to DY-HL30T to trigger sounds. Ensures enough time has passed during HIGH signal duration, and no active HIGH signals are being sent (busy line).
+1.  takes the standard callback parameters (pkt, ctx)
+2.  casts the generic 'ctx' pointer to point back to the correct ToyCarSystem type
+3.  calls the real member function onPacketReceived on that object
 
 ## Maintenance Notes
 
