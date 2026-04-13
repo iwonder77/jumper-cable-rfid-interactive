@@ -18,8 +18,8 @@
 #include <MFRC522Debug.h>
 #include <Adafruit_SleepyDog.h>
 
-#include "ToyCarSystem.h"
-#include "Debug.h"
+#include "src/ToyCarSystem.h"
+#include "src/Debug.h"
 
 // ----- MAIN RFID HARDWARE INSTANCES -----
 MFRC522DriverI2C driver{ config::RFID2_WS1850S_ADDR, Wire };
