@@ -11,12 +11,10 @@ bool AudioPlayer::begin() {
   pinMode(config::ZAP_AUDIO_TRIGGER, OUTPUT);
   pinMode(config::WRONG_CHOICE_AUDIO_TRIGGER, OUTPUT);
 
-  delay(10);
-
-  digitalWrite(config::SPUTTER_AUDIO_TRIGGER, LOW);
-  digitalWrite(config::ENGINE_START_AUDIO_TRIGGER, LOW);
-  digitalWrite(config::ZAP_AUDIO_TRIGGER, LOW);
-  digitalWrite(config::WRONG_CHOICE_AUDIO_TRIGGER, LOW);
+  digitalWrite(config::SPUTTER_AUDIO_TRIGGER, HIGH);
+  digitalWrite(config::ENGINE_START_AUDIO_TRIGGER, HIGH);
+  digitalWrite(config::ZAP_AUDIO_TRIGGER, HIGH);
+  digitalWrite(config::WRONG_CHOICE_AUDIO_TRIGGER, HIGH);
 
   delay(10);
 
@@ -48,7 +46,7 @@ void AudioPlayer::play(uint8_t triggerPin) {
     break;
   }
 
-  digitalWrite(triggerPin, HIGH);
+  digitalWrite(triggerPin, LOW);
   isPlaying = true;
   playStartTime = millis();
 
@@ -58,10 +56,10 @@ void AudioPlayer::play(uint8_t triggerPin) {
 void AudioPlayer::update() {
   if (isPlaying) {
     if (millis() - playStartTime > config::PULSE_SEND_TIME_MS) {
-      digitalWrite(config::SPUTTER_AUDIO_TRIGGER, LOW);
-      digitalWrite(config::ENGINE_START_AUDIO_TRIGGER, LOW);
-      digitalWrite(config::ZAP_AUDIO_TRIGGER, LOW);
-      digitalWrite(config::WRONG_CHOICE_AUDIO_TRIGGER, LOW);
+      digitalWrite(config::SPUTTER_AUDIO_TRIGGER, HIGH);
+      digitalWrite(config::ENGINE_START_AUDIO_TRIGGER, HIGH);
+      digitalWrite(config::ZAP_AUDIO_TRIGGER, HIGH);
+      digitalWrite(config::WRONG_CHOICE_AUDIO_TRIGGER, HIGH);
       isPlaying = false;
       playStartTime = 0;
     }
