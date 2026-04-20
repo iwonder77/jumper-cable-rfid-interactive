@@ -45,10 +45,6 @@ public:
   bool isSystemHealthy() const { return systemHealthy; };
   void printSystemStatus() const;
 
-  // hardware setup helpers
-  void initializeHardware();
-  void initializeRS485();
-
 private:
   // ----- CLASS INSTANCES -----
   Battery batteries[config::NUM_BATTERIES];
