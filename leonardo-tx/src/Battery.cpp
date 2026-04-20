@@ -36,8 +36,6 @@ bool Battery::initialize() {
 
 /*
  * @brief Updates both positive and negative readers
- *
- * @param reader MFRC522 rfid reader object
  */
 void Battery::updateReaders() {
   positive.update();
