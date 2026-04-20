@@ -10,7 +10,6 @@
  */
 
 #include <Arduino.h>
-#include <MFRC522v2.h>
 
 #include "Battery.h"
 #include "Config.h"
@@ -38,8 +37,8 @@ public:
   WallBatterySystem();
 
   // main system methods
-  bool initializeSystem(MFRC522 &reader);
-  void updateSystem(MFRC522 &reader);
+  bool initializeSystem();
+  void updateSystem();
   void processSystemLogic();
 
   // system status
@@ -68,7 +67,7 @@ private:
   // ----- PRIVATE METHODS -----
 
   // battery management
-  bool initializeBatteries(MFRC522 &reader);
+  bool initializeBatteries();
   BatteryState getCurrentBatteryState(uint8_t batteryIndex) const;
 
   // communication
