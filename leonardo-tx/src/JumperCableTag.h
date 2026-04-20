@@ -29,7 +29,7 @@ inline uint8_t calculateChecksum(const uint8_t *data, uint8_t length) {
 
 /**
  * Parse tag data from a raw byte buffer.
- * Validates magic byte and checksum.
+ * Validates field type and checksum.
  *
  * The TagData struct `out` is always populated via memcpy, even if buffer data
  * doesn't match, so it is up to the caller to inspect individual fields for
