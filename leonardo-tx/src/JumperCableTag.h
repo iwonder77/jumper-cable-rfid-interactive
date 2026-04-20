@@ -38,8 +38,22 @@ inline uint8_t calculateChecksum(const uint8_t *data, uint8_t length) {
 inline bool parseTagData(const byte *buffer, TagData &out) {
   memcpy(&out, buffer, sizeof(TagData));
 
+  // validate type field is a known value before accepting
+  if (strncmp(out.type, "POS", 3) != 0 && strncmp(out.type, "NEG", 3) != 0)
+    return false;
+
+  // validate checksum
   uint8_t expected = calculateChecksum((uint8_t *)&out, sizeof(out) - 1);
+
   return expected == out.checksum;
+}
+
+inline const char *typeToString(const TagData &tag) {
+  if (strncmp(tag.type, "POS", 3) == 0)
+    return "POS";
+  if (strncmp(tag.type, "NEG", 3) == 0)
+    return "NEG";
+  return "???";
 }
 
 } // namespace jumper_cable_tag
