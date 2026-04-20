@@ -24,17 +24,9 @@
 */
 
 #include <Wire.h>
-#include <MFRC522v2.h>
-#include <MFRC522DriverI2C.h>
-#include <MFRC522Debug.h>
 #include <avr/wdt.h>
 
 #include "src/WallBatterySystem.h"
-#include "src/Config.h"
-
-// ----- MAIN RFID HARDWARE INSTANCES -----
-MFRC522DriverI2C driver{ config::RFID2_WS1850S_ADDR, Wire };
-MFRC522 reader{ driver };
 
 // ----- WALL BATTERY SYSTEM INSTANCE -----
 WallBatterySystem wallSystem;
@@ -44,7 +36,7 @@ void setup() {
   Serial.begin(9600);
   delay(10);
 
-  if (!wallSystem.initializeSystem(reader)) {
+  if (!wallSystem.initializeSystem()) {
     // if system initialization failed - wallSystem object handles error state
     return;
   }
@@ -52,7 +44,7 @@ void setup() {
 
 void loop() {
   wdt_reset();  // pat watchdog (reset timer)
-  wallSystem.updateSystem(reader);
+  wallSystem.updateSystem();
   wallSystem.processSystemLogic();
   delay(5);
 }
