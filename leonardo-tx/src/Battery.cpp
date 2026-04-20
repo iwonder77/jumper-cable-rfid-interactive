@@ -21,8 +21,8 @@ bool Battery::initialize() {
   }
 
   // ----- Initialize the RFID readers -----
-  positive.init(reader);
-  negative.init(reader);
+  positive.init();
+  negative.init();
 
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
     DEBUG_PRINT("Warning: Battery ");
@@ -40,8 +40,8 @@ bool Battery::initialize() {
  * @param reader MFRC522 rfid reader object
  */
 void Battery::updateReaders() {
-  positive.update(reader);
-  negative.update(reader);
+  positive.update();
+  negative.update();
 }
 
 /*
