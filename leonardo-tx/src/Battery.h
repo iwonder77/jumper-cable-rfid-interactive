@@ -16,7 +16,7 @@
 
 class Battery {
 public:
-  Battery(uint8_t muxAddr, uint8_t id, uint8_t readerAddr)
+  Battery(uint8_t muxAddr, uint8_t id)
       : muxAddr(muxAddr), id(id),
         negative("Negative", muxAddr, config::NEGATIVE_TERMINAL_CHANNEL),
         positive("Positive", muxAddr, config::POSITIVE_TERMINAL_CHANNEL) {}
