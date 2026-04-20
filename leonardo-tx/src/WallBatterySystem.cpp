@@ -1,5 +1,6 @@
 #include "WallBatterySystem.h"
 #include "CommPacket.h"
+#include "Config.h"
 #include "Debug.h"
 #include "MuxController.h"
 
@@ -7,9 +8,9 @@
  * @brief Constructor
  */
 WallBatterySystem::WallBatterySystem()
-    : batteries{{config::TCA9548A_6V_ADDR, 0, config::RFID2_WS1850S_ADDR},
-                {config::TCA9548A_12V_ADDR, 1, config::RFID2_WS1850S_ADDR},
-                {config::TCA9548A_16V_ADDR, 2, config::RFID2_WS1850S_ADDR}},
+    : batteries{{config::TCA9548A_6V_ADDR, 0},
+                {config::TCA9548A_12V_ADDR, 1},
+                {config::TCA9548A_16V_ADDR, 2}},
       currentLEDState(LED_OFF), lastLEDState(LED_OFF), activeBattery(-1),
       systemHealthy(false), lastPollTime(0), currentPollingBattery(0) {
 
@@ -20,10 +21,8 @@ WallBatterySystem::WallBatterySystem()
 
 /*
  * @brief initializes hardware
- *
- * @param reader MFRC522 rfid reader object
  */
-bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
+bool WallBatterySystem::initializeSystem() {
   // ----- RS485 SETUP -----
   pinMode(config::RS485_DE_PIN, OUTPUT); // control pin
   digitalWrite(config::RS485_DE_PIN,
@@ -54,7 +53,7 @@ bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
   disableAllMuxChannels();
 
   // Initialize battery subsystem
-  systemHealthy = initializeBatteries(reader);
+  systemHealthy = initializeBatteries();
 
   if (!systemHealthy) {
     handleSystemFailure();
@@ -71,15 +70,13 @@ bool WallBatterySystem::initializeSystem(MFRC522 &reader) {
 
 /*
  * @brief Updates system's internal members at a certain sample interval
- *
- * @param reader MFRC522 rfid reader object
  */
-void WallBatterySystem::updateSystem(MFRC522 &reader) {
+void WallBatterySystem::updateSystem() {
   unsigned long currentTime = millis();
 
   if (currentTime - lastPollTime >= config::POLL_INTERVAL_MS) {
     // Poll only one battery per cycle (round-robin)
-    batteries[currentPollingBattery].updateReaders(reader);
+    batteries[currentPollingBattery].updateReaders();
 
     // Move to next battery
     currentPollingBattery = (currentPollingBattery + 1) % config::NUM_BATTERIES;
@@ -119,10 +116,9 @@ void WallBatterySystem::printSystemStatus() const {
 /*
  * @brief Initializes each of the wall batteries
  *
- * @param reader MFRC522 rfid reader object
  * @return successful initialization of all wall batteries
  */
-bool WallBatterySystem::initializeBatteries(MFRC522 &reader) {
+bool WallBatterySystem::initializeBatteries() {
   DEBUG_PRINTLN("\nInitializing batteries...");
   bool allBatteriesOK = true;
 
@@ -131,7 +127,7 @@ bool WallBatterySystem::initializeBatteries(MFRC522 &reader) {
     DEBUG_PRINT(batteries[i].getName());
     DEBUG_PRINTLN(" Battery ---");
 
-    bool batteryOK = batteries[i].initialize(reader);
+    bool batteryOK = batteries[i].initialize();
     batteries[i].printInitializationSummary();
 
     if (!batteryOK) {
@@ -153,15 +149,18 @@ bool WallBatterySystem::initializeBatteries(MFRC522 &reader) {
  */
 BatteryState
 WallBatterySystem::getCurrentBatteryState(uint8_t batteryIndex) const {
-  bool posPresent =
-      (batteries[batteryIndex].getPositive().getTagState() == TAG_PRESENT);
-  bool negPresent =
-      (batteries[batteryIndex].getNegative().getTagState() == TAG_PRESENT);
+  const Reader &pos = batteries[batteryIndex].getPositive();
+  const Reader &neg = batteries[batteryIndex].getNegative();
 
-  return {
-      posPresent, negPresent,
-      posPresent ? batteries[batteryIndex].getPositive().polarityOK() : false,
-      negPresent ? batteries[batteryIndex].getNegative().polarityOK() : false};
+  bool posPresent = (pos.getTagState() == TagState::Confirmed);
+  bool negPresent = (neg.getTagState() == TagState::Confirmed);
+
+  bool posPolarity =
+      posPresent && (strncmp(pos.getTagData().type, "POS", 3) == 0);
+  bool negPolarity =
+      negPresent && (strncmp(neg.getTagData().type, "NEG", 3) == 0);
+
+  return {posPresent, negPresent, posPolarity, negPolarity};
 }
 
 /*
@@ -283,8 +282,10 @@ LEDState WallBatterySystem::determineLEDState() {
 int WallBatterySystem::findActiveBattery() const {
   // find the battery with the most complete configuration
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
-    bool posPresent = (batteries[i].getPositive().getTagState() == TAG_PRESENT);
-    bool negPresent = (batteries[i].getNegative().getTagState() == TAG_PRESENT);
+    bool posPresent =
+        (batteries[i].getPositive().getTagState() == TagState::Confirmed);
+    bool negPresent =
+        (batteries[i].getNegative().getTagState() == TagState::Confirmed);
 
     // prioritize batteries with both terminals connected
     if (posPresent && negPresent) {
