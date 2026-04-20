@@ -38,7 +38,7 @@ static constexpr uint8_t PACKET_START2 = 0x55;
 static constexpr uint8_t TCA9548A_6V_ADDR = 0x70;
 static constexpr uint8_t TCA9548A_12V_ADDR = 0x71;
 static constexpr uint8_t TCA9548A_16V_ADDR = 0x72;
-static constexpr uint8_t RFID2_WS1850S_ADDR = 0x28;
+static constexpr uint8_t WS1850S_I2C_ADDR = 0x28;
 static constexpr uint32_t I2C_CLOCK_SPEED = 100000; // 100kHz standard mode
 
 // ----- TCA9548A I2C MUX Channels -----
@@ -47,6 +47,7 @@ const uint8_t POSITIVE_TERMINAL_CHANNEL = 2;
 static constexpr uint32_t CHANNEL_SWITCH_SETTLE_MS = 5;
 
 // ---------- RFID TAG/READER CONSTANTS ----------
+static constexpr uint8_t MAX_READ_ATTEMPTS = 5;
 static constexpr uint8_t READER_INIT_SETTLE_MS = 10;
 static constexpr unsigned long TAG_DEBOUNCE_TIME =
     150; // debounce time for tag detection (ms) (3 * round robin polling
