@@ -62,6 +62,6 @@ private:
   uint8_t last_UID_length_ = 0;
 
   void clearTagData();
-  void readTagData();
+  bool readTagData();
   bool compareUID(uint8_t *uid1, uint8_t len1, uint8_t *uid2, uint8_t len2);
 };

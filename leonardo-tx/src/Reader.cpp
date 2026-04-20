@@ -1,5 +1,7 @@
 #include "Reader.h"
 #include "Config.h"
+#include "Debug.h"
+#include "JumperCableTag.h"
 
 // NOTE: must call Wire.begin() in setup() before we initialize reader!
 void Reader::init() {
@@ -90,10 +92,6 @@ void Reader::update() {
         first_seen_time_ = now;
         Serial.print(name_);
         Serial.println(": Different tag detected, clearing previous data");
-        if (tag_identified_ && callback_) {
-          callback_(Event{EventType::PieceRemoved, channel_,
-                          gene_tag::NucleotidePair::None});
-        }
         clearTagData();
         tag_identified_ = false;
         read_attempts_ = 0;
@@ -103,17 +101,15 @@ void Reader::update() {
       // we can assume the same tag is still here, if we haven't identified it
       // yet, try reading
       if (!tag_identified_) {
-        readTagData();
 
-        if (tag_.type != gene_tag::NucleotidePair::None) {
+        if (readTagData()) {
           // parse succeeded - we must know what this piece is now
           tag_identified_ = true;
           Serial.print(name_);
           Serial.print(": Identified piece as ");
-          Serial.println(gene_tag::pairToString(tag_.pair));
-          if (callback_) {
-            callback_(Event{EventType::PieceIdentified, channel_, tag_.pair});
-          }
+          Serial.println(jumper_cable_tag::typeToString(tag_));
+          DEBUG_PRINT(" #");
+          DEBUG_PRINTLN(tag_.id);
         } else {
           // parse failed - count read attempts here
           read_attempts_++;
@@ -162,16 +158,12 @@ void Reader::update() {
         tag_state_ = TagState::Departing;
         Serial.print(name_);
         Serial.println(": Tag removed");
-        if (callback_ && tag_identified_) {
-          callback_(Event{EventType::PieceRemoved, channel_,
-                          gene_tag::NucleotidePair::None});
-        }
         clearTagData();
       }
       break;
     case TagState::Departing:
-      // confirm removal
-      if (now - last_seen_time_ > config::TAG_ABSENCE_TIMEOUT) {
+      // confirm removal (a little more lenient on removal)
+      if (now - last_seen_time_ > config::TAG_ABSENCE_TIMEOUT * 2) {
         tag_state_ = TagState::Absent;
         Serial.print(name_);
         Serial.println(": Tag removal confirmed");
@@ -205,12 +197,12 @@ void Reader::clearTagData() {
   memset(last_UID_, 0, sizeof(last_UID_));
   tag_identified_ = false;
   read_attempts_ = 0;
-  tag_ = {0, 0, gene_tag::NucleotidePair::None, 0};
+  tag_ = {};
 }
 
-void Reader::readTagData() {
+bool Reader::readTagData() {
   if (!reader_ok_ || tag_state_ != TagState::Confirmed)
-    return;
+    return false;
 
   Serial.print(name_);
   Serial.println(": Reading tag data...");
@@ -223,13 +215,15 @@ void Reader::readTagData() {
     Serial.print(name_);
     Serial.println(": Failed to read card data");
     // Don't clear tag data - we know tag is present, just couldn't read it
-    return;
+    return false;
   }
 
   // MIFARE_Read read some data into buffer, lets parse it and verify
-  if (!gene_tag::parseTagData(buffer, tag_)) {
+  bool ok = jumper_cable_tag::parseTagData(buffer, tag_);
+  if (!ok) {
     Serial.print(name_);
     Serial.println(": data read but incorrect");
+    return false;
   }
 
   /*****************
@@ -237,6 +231,7 @@ void Reader::readTagData() {
    * reader.PICC_HaltA();
    ******************/
   reader_.PCD_StopCrypto1();
+  return ok;
 }
 
 // ========== UTILITY FUNCTIONS ==========
