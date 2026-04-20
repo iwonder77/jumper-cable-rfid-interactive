@@ -27,6 +27,8 @@ void Reader::init() {
 
   // initialize hardware instance
   reader_.PCD_Init();
+
+  delay(config::READER_INIT_SETTLE_MS);
 }
 
 void Reader::update() {
@@ -82,10 +84,6 @@ void Reader::update() {
       break;
     case TagState::Confirmed:
       // 1. Handle tag swap first
-      // before doing anything else, check if this is a different tag, if it is,
-      // we need to throw away our current state, fire a removal event, clear
-      // previous tag data, and start the debounce process over again for the
-      // new tag
       if (!is_same_tag) {
         // different tag detected
         tag_state_ = TagState::Detecting;
@@ -100,8 +98,7 @@ void Reader::update() {
       // 2. Attempt tag identification
       // we can assume the same tag is still here, if we haven't identified it
       // yet, try reading
-      if (!tag_identified_) {
-
+      if (!tag_identified_ && read_attempts_ < config::MAX_READ_ATTEMPTS) {
         if (readTagData()) {
           // parse succeeded - we must know what this piece is now
           tag_identified_ = true;
