@@ -1,16 +1,15 @@
 #include <Arduino.h>
 
 #include "Battery.h"
-#include "Config.h"
 #include "Debug.h"
-#include "MuxController.h"
+#include "Reader.h"
 
 /*
  * @brief Initializes both terminal readers
  *
  * @return Successful initialization
  */
-bool Battery::initialize(MFRC522 &reader) {
+bool Battery::initialize() {
   // Test MUX communication first
   Wire.beginTransmission(getMuxAddr());
   byte result = Wire.endTransmission();
@@ -22,14 +21,7 @@ bool Battery::initialize(MFRC522 &reader) {
   }
 
   // ----- Initialize the RFID readers -----
-  // initialize positive terminal
-  MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
-  delay(config::CHANNEL_SWITCH_SETTLE_MS);
   positive.init(reader);
-
-  // initialize negative terminal
-  MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
-  delay(config::CHANNEL_SWITCH_SETTLE_MS);
   negative.init(reader);
 
   if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
@@ -47,18 +39,9 @@ bool Battery::initialize(MFRC522 &reader) {
  *
  * @param reader MFRC522 rfid reader object
  */
-void Battery::updateReaders(MFRC522 &reader) {
-  // update positive terminal
-  MuxController::selectChannel(muxAddr, config::POSITIVE_TERMINAL_CHANNEL);
-  reader.PCD_Init();
+void Battery::updateReaders() {
   positive.update(reader);
-
-  // update negative terminal
-  MuxController::selectChannel(muxAddr, config::NEGATIVE_TERMINAL_CHANNEL);
-  reader.PCD_Init();
   negative.update(reader);
-
-  MuxController::disableChannel(muxAddr);
 }
 
 /*
@@ -68,13 +51,16 @@ void Battery::updateReaders(MFRC522 &reader) {
  * @return True if configuration is correct, false otherwise
  */
 bool Battery::hasValidConfiguration() const {
-  // both terminals must have tags in PRESENT state
-  if (positive.getTagState() != TAG_PRESENT ||
-      negative.getTagState() != TAG_PRESENT)
+  // both terminals must have tags in Confirmed state
+  if (positive.getTagState() != TagState::Confirmed ||
+      negative.getTagState() != TagState::Confirmed)
     return false;
 
   // both cards must have correct polarity
-  if (!positive.polarityOK() || !negative.polarityOK())
+  if (strncmp(positive.getTagData().type, "POS", 3) != 0)
+    return false;
+
+  if (strncmp(negative.getTagData().type, "NEG", 3) != 0)
     return false;
 
   // cable IDs must form valid pair
