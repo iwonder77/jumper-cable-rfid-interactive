@@ -9,20 +9,20 @@ void Reader::init() {
   // scope (see struct in Reader.h)
   MuxGuard guard(mux_addr_, channel_);
 
-  Serial.print("Testing ");
-  Serial.print(name_);
-  Serial.print(" Reader I2C Communication on Channel ");
-  Serial.print(channel_);
-  Serial.print(": ");
+  DEBUG_PRINT("Testing ");
+  DEBUG_PRINT(name_);
+  DEBUG_PRINT(" Reader I2C Communication on Channel ");
+  DEBUG_PRINT(channel_);
+  DEBUG_PRINT(": ");
 
   Wire.beginTransmission(config::WS1850S_I2C_ADDR);
   if (Wire.endTransmission() != 0) {
-    Serial.println("FAILED - I2C Communication ERROR");
+    DEBUG_PRINTLN("FAILED - I2C Communication ERROR");
     reader_ok_ = false;
     return;
   }
 
-  Serial.println(" SUCCESS");
+  DEBUG_PRINTLN(" SUCCESS");
   reader_ok_ = true;
 
   // initialize hardware instance
@@ -65,8 +65,8 @@ void Reader::update() {
     case TagState::Absent:
       tag_state_ = TagState::Detecting;
       first_seen_time_ = now; // start debounce timer
-      Serial.print(name_);
-      Serial.println(": New tag detected!");
+      DEBUG_PRINT(name_);
+      DEBUG_PRINTLN(": New tag detected!");
       break;
     case TagState::Detecting:
       // check debounce timer in case we have a false positive detection
@@ -75,8 +75,8 @@ void Reader::update() {
         tag_state_ = TagState::Confirmed;
         tag_identified_ = false;
         read_attempts_ = 0;
-        Serial.print(name_);
-        Serial.println(
+        DEBUG_PRINT(name_);
+        DEBUG_PRINTLN(
             ": Tag confirmed present, transitioning to read its data");
       }
       break;
@@ -90,8 +90,8 @@ void Reader::update() {
         // different tag detected
         tag_state_ = TagState::Detecting;
         first_seen_time_ = now;
-        Serial.print(name_);
-        Serial.println(": Different tag detected, clearing previous data");
+        DEBUG_PRINT(name_);
+        DEBUG_PRINTLN(": Different tag detected, clearing previous data");
         clearTagData();
         tag_identified_ = false;
         read_attempts_ = 0;
@@ -105,9 +105,9 @@ void Reader::update() {
         if (readTagData()) {
           // parse succeeded - we must know what this piece is now
           tag_identified_ = true;
-          Serial.print(name_);
-          Serial.print(": Identified piece as ");
-          Serial.println(jumper_cable_tag::typeToString(tag_));
+          DEBUG_PRINT(name_);
+          DEBUG_PRINT(": Identified piece as ");
+          DEBUG_PRINTLN(jumper_cable_tag::typeToString(tag_));
           DEBUG_PRINT(" #");
           DEBUG_PRINTLN(tag_.id);
         } else {
@@ -115,8 +115,8 @@ void Reader::update() {
           read_attempts_++;
 
           if (read_attempts_ >= config::MAX_READ_ATTEMPTS) {
-            Serial.print(name_);
-            Serial.println(": Tag present but unreadable after max attempts");
+            DEBUG_PRINT(name_);
+            DEBUG_PRINTLN(": Tag present but unreadable after max attempts");
             // stop trying — tag is physically there but we can't identify it.
             // we don't clear tag state or change tag_state, because the tag
             // IS present. we just can't read it. the system treats this slot
@@ -130,8 +130,8 @@ void Reader::update() {
     case TagState::Departing:
       tag_state_ = TagState::Detecting;
       first_seen_time_ = now;
-      Serial.print(name_);
-      Serial.println(": Tag returned!");
+      DEBUG_PRINT(name_);
+      DEBUG_PRINTLN(": Tag returned!");
       break;
     default:
       break;
@@ -147,8 +147,8 @@ void Reader::update() {
       // small timeout for tags that were just detected or for false positives
       if (consecutive_fails_ > 2) {
         tag_state_ = TagState::Absent;
-        Serial.print(name_);
-        Serial.println(": Tag detection failed");
+        DEBUG_PRINT(name_);
+        DEBUG_PRINTLN(": Tag detection failed");
         clearTagData();
       }
       break;
@@ -156,8 +156,8 @@ void Reader::update() {
       // more lenient/longer timeout for already established tags
       if (consecutive_fails_ >= config::TAG_PRESENCE_THRESHOLD) {
         tag_state_ = TagState::Departing;
-        Serial.print(name_);
-        Serial.println(": Tag removed");
+        DEBUG_PRINT(name_);
+        DEBUG_PRINTLN(": Tag removed");
         clearTagData();
       }
       break;
@@ -165,8 +165,8 @@ void Reader::update() {
       // confirm removal (a little more lenient on removal)
       if (now - last_seen_time_ > config::TAG_ABSENCE_TIMEOUT * 2) {
         tag_state_ = TagState::Absent;
-        Serial.print(name_);
-        Serial.println(": Tag removal confirmed");
+        DEBUG_PRINT(name_);
+        DEBUG_PRINTLN(": Tag removal confirmed");
       }
       break;
     default:
@@ -178,16 +178,16 @@ void Reader::update() {
 void Reader::printStatus() const {
   switch (tag_state_) {
   case TagState::Absent:
-    Serial.println("No card");
+    DEBUG_PRINTLN("No card");
     break;
   case TagState::Detecting:
-    Serial.println("Detecting...");
+    DEBUG_PRINTLN("Detecting...");
     break;
   case TagState::Confirmed:
-    Serial.println("Tag present");
+    DEBUG_PRINTLN("Tag present");
     break;
   case TagState::Departing:
-    Serial.println("Card removed (confirming...)");
+    DEBUG_PRINTLN("Card removed (confirming...)");
     break;
   }
 }
@@ -204,16 +204,16 @@ bool Reader::readTagData() {
   if (!reader_ok_ || tag_state_ != TagState::Confirmed)
     return false;
 
-  Serial.print(name_);
-  Serial.println(": Reading tag data...");
+  DEBUG_PRINT(name_);
+  DEBUG_PRINTLN(": Reading tag data...");
 
   byte buffer[18];
   byte bufferSize = sizeof(buffer);
 
   if (reader_.MIFARE_Read(config::TAG_START_READ_PAGE, buffer, &bufferSize) !=
       MFRC522::StatusCode::STATUS_OK) {
-    Serial.print(name_);
-    Serial.println(": Failed to read card data");
+    DEBUG_PRINT(name_);
+    DEBUG_PRINTLN(": Failed to read card data");
     // Don't clear tag data - we know tag is present, just couldn't read it
     return false;
   }
@@ -221,8 +221,8 @@ bool Reader::readTagData() {
   // MIFARE_Read read some data into buffer, lets parse it and verify
   bool ok = jumper_cable_tag::parseTagData(buffer, tag_);
   if (!ok) {
-    Serial.print(name_);
-    Serial.println(": data read but incorrect");
+    DEBUG_PRINT(name_);
+    DEBUG_PRINTLN(": data read but incorrect");
     return false;
   }
 
