@@ -37,7 +37,7 @@ bool WallBatterySystem::initializeSystem() {
   currentLEDState = LED_OFF;
   lastLEDState = LED_OFF;
 
-  // begin RS485 Software Serial
+  // begin RS485 Hardware Serial (Serial1)
   Serial1.begin(config::RS485_BAUD_RATE);
 
   DEBUG_PRINT("RS485 Hardware Serial1 initialized at ");
