@@ -50,13 +50,13 @@ void Reader::update() {
     tag_detected = true;
 
     // check if this is the same tag or a different one
-    bool is_same_tag = (last_UID_length_ == reader_.uid.size) &&
-                       compareUID(last_UID_, last_UID_length_,
+    bool is_same_tag = (last_uid_length_ == reader_.uid.size) &&
+                       compareUid(last_uid_, last_uid_length_,
                                   reader_.uid.uidByte, reader_.uid.size);
 
     // update UID
-    memcpy(last_UID_, reader_.uid.uidByte, reader_.uid.size);
-    last_UID_length_ = reader_.uid.size;
+    memcpy(last_uid_, reader_.uid.uidByte, reader_.uid.size);
+    last_uid_length_ = reader_.uid.size;
 
     // update timing and error
     last_seen_time_ = now;
@@ -190,8 +190,8 @@ void Reader::printStatus() const {
 }
 
 void Reader::clearTagData() {
-  last_UID_length_ = 0;
-  memset(last_UID_, 0, sizeof(last_UID_));
+  last_uid_length_ = 0;
+  memset(last_uid_, 0, sizeof(last_uid_));
   tag_identified_ = false;
   read_attempts_ = 0;
   tag_ = {};
@@ -205,9 +205,9 @@ bool Reader::readTagData() {
   DEBUG_PRINTLN(": Reading tag data...");
 
   byte buffer[18];
-  byte bufferSize = sizeof(buffer);
+  byte buffer_size = sizeof(buffer);
 
-  if (reader_.MIFARE_Read(config::TAG_START_READ_PAGE, buffer, &bufferSize) !=
+  if (reader_.MIFARE_Read(config::TAG_START_READ_PAGE, buffer, &buffer_size) !=
       MFRC522::StatusCode::STATUS_OK) {
     DEBUG_PRINT(name_);
     DEBUG_PRINTLN(": Failed to read card data");
@@ -232,6 +232,6 @@ bool Reader::readTagData() {
 }
 
 // ========== UTILITY FUNCTIONS ==========
-bool Reader::compareUID(byte *uid1, uint8_t len1, byte *uid2, uint8_t len2) {
+bool Reader::compareUid(byte *uid1, uint8_t len1, byte *uid2, uint8_t len2) {
   return (len1 == len2) && memcmp(uid1, uid2, len1) == 0;
 }

@@ -58,10 +58,10 @@ private:
   uint32_t first_seen_time_ = 0;
 
   uint8_t consecutive_fails_ = 0;
-  uint8_t last_UID_[10]{};
-  uint8_t last_UID_length_ = 0;
+  uint8_t last_uid_[10]{};
+  uint8_t last_uid_length_ = 0;
 
   void clearTagData();
   bool readTagData();
-  bool compareUID(uint8_t *uid1, uint8_t len1, uint8_t *uid2, uint8_t len2);
+  bool compareUid(uint8_t *uid1, uint8_t len1, uint8_t *uid2, uint8_t len2);
 };

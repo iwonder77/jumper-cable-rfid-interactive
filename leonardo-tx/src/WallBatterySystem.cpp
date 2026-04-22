@@ -8,14 +8,15 @@
  * @brief Constructor
  */
 WallBatterySystem::WallBatterySystem()
-    : batteries{{config::TCA9548A_6V_ADDR, 0},
-                {config::TCA9548A_12V_ADDR, 1},
-                {config::TCA9548A_16V_ADDR, 2}},
-      currentLEDState(LED_OFF), lastLEDState(LED_OFF), activeBattery(-1),
-      systemHealthy(false), lastPollTime(0), currentPollingBattery(0) {
+    : batteries_{{config::TCA9548A_6V_ADDR, 0},
+                 {config::TCA9548A_12V_ADDR, 1},
+                 {config::TCA9548A_16V_ADDR, 2}},
+      current_led_state_(LedState::Off), last_led_state_(LedState::Off),
+      active_battery_id_(-1), system_health_(false), last_poll_time_(0),
+      curr_polling_battery_(0) {
 
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
-    lastStates[i] = {false, false, false, false};
+    last_battery_state_[i] = {false, false, false, false};
   }
 }
 
@@ -34,8 +35,8 @@ bool WallBatterySystem::initializeSystem() {
   digitalWrite(config::GREEN_LED_PIN, LOW);
   digitalWrite(config::RED_LED_PIN, LOW);
 
-  currentLEDState = LED_OFF;
-  lastLEDState = LED_OFF;
+  current_led_state_ = LedState::Off;
+  last_led_state_ = LedState::Off;
 
   // begin RS485 Hardware Serial (Serial1)
   Serial1.begin(config::RS485_BAUD_RATE);
@@ -53,9 +54,9 @@ bool WallBatterySystem::initializeSystem() {
   disableAllMuxChannels();
 
   // Initialize battery subsystem
-  systemHealthy = initializeBatteries();
+  system_health_ = initializeBatteries();
 
-  if (!systemHealthy) {
+  if (!system_health_) {
     handleSystemFailure();
     return false;
   }
@@ -72,15 +73,15 @@ bool WallBatterySystem::initializeSystem() {
  * @brief Updates system's internal members at a certain sample interval
  */
 void WallBatterySystem::updateSystem() {
-  unsigned long currentTime = millis();
+  uint32_t now = millis();
 
-  if (currentTime - lastPollTime >= config::POLL_INTERVAL_MS) {
+  if (now - last_poll_time_ >= config::POLL_INTERVAL_MS) {
     // Poll only one battery per cycle (round-robin)
-    batteries[currentPollingBattery].updateReaders();
+    batteries_[curr_polling_battery_].updateReaders();
 
     // Move to next battery
-    currentPollingBattery = (currentPollingBattery + 1) % config::NUM_BATTERIES;
-    lastPollTime = currentTime;
+    curr_polling_battery_ = (curr_polling_battery_ + 1) % config::NUM_BATTERIES;
+    last_poll_time_ = now;
   }
 }
 
@@ -99,17 +100,17 @@ void WallBatterySystem::processSystemLogic() {
 void WallBatterySystem::printSystemStatus() const {
   DEBUG_PRINTLN("\n=== SYSTEM STATUS ===");
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
-    DEBUG_PRINT(batteries[i].getName());
+    DEBUG_PRINT(batteries_[i].getName());
     DEBUG_PRINT(" Battery: ");
-    if (batteries[i].getPositive().getReaderStatus() &&
-        batteries[i].getNegative().getReaderStatus()) {
+    if (batteries_[i].getPositive().getReaderStatus() &&
+        batteries_[i].getNegative().getReaderStatus()) {
       DEBUG_PRINTLN("OK");
     } else {
       DEBUG_PRINTLN("FAILED");
     }
   }
   DEBUG_PRINT("Overall System: ");
-  DEBUG_PRINTLN(systemHealthy ? "HEALTHY" : "UNHEALTHY");
+  DEBUG_PRINTLN(system_health_ ? "HEALTHY" : "UNHEALTHY");
   DEBUG_PRINTLN("=====================");
 }
 
@@ -120,47 +121,47 @@ void WallBatterySystem::printSystemStatus() const {
  */
 bool WallBatterySystem::initializeBatteries() {
   DEBUG_PRINTLN("\nInitializing batteries...");
-  bool allBatteriesOK = true;
+  bool all_batteries_ok = true;
 
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
     DEBUG_PRINT("\n--- Initializing ");
-    DEBUG_PRINT(batteries[i].getName());
+    DEBUG_PRINT(batteries_[i].getName());
     DEBUG_PRINTLN(" Battery ---");
 
-    bool batteryOK = batteries[i].initialize();
-    batteries[i].printInitializationSummary();
+    bool battery_ok = batteries_[i].initialize();
+    batteries_[i].printInitializationSummary();
 
-    if (!batteryOK) {
+    if (!battery_ok) {
       DEBUG_PRINT("ERROR: ");
-      DEBUG_PRINT(batteries[i].getName());
+      DEBUG_PRINT(batteries_[i].getName());
       DEBUG_PRINTLN(" battery initialization failed!");
-      allBatteriesOK = false;
+      all_batteries_ok = false;
     }
   }
 
-  return allBatteriesOK;
+  return all_batteries_ok;
 }
 
 /*
  * @brief Retrieves the state of any battery
  *
- * @param batteryIndex index of battery to retrieve state from
+ * @param battery_index index of battery to retrieve state from
  * @return battery state's `BatteryState` struct
  */
 BatteryState
-WallBatterySystem::getCurrentBatteryState(uint8_t batteryIndex) const {
-  const Reader &pos = batteries[batteryIndex].getPositive();
-  const Reader &neg = batteries[batteryIndex].getNegative();
+WallBatterySystem::getCurrentBatteryState(uint8_t battery_index) const {
+  const Reader &pos = batteries_[battery_index].getPositive();
+  const Reader &neg = batteries_[battery_index].getNegative();
 
-  bool posPresent = (pos.getTagState() == TagState::Confirmed);
-  bool negPresent = (neg.getTagState() == TagState::Confirmed);
+  bool pos_present = (pos.getTagState() == TagState::Confirmed);
+  bool neg_present = (neg.getTagState() == TagState::Confirmed);
 
-  bool posPolarity =
-      posPresent && (strncmp(pos.getTagData().type, "POS", 3) == 0);
-  bool negPolarity =
-      negPresent && (strncmp(neg.getTagData().type, "NEG", 3) == 0);
+  bool pos_polarity =
+      pos_present && (strncmp(pos.getTagData().type, "POS", 3) == 0);
+  bool neg_polarity =
+      neg_present && (strncmp(neg.getTagData().type, "NEG", 3) == 0);
 
-  return {posPresent, negPresent, posPolarity, negPolarity};
+  return {pos_present, neg_present, pos_polarity, neg_polarity};
 }
 
 /*
@@ -169,15 +170,15 @@ WallBatterySystem::getCurrentBatteryState(uint8_t batteryIndex) const {
  */
 void WallBatterySystem::updateCommunication() {
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
-    BatteryState currentState = getCurrentBatteryState(i);
+    BatteryState curr_state = getCurrentBatteryState(i);
 
     // check for any change in state
-    if (currentState != lastStates[i]) {
+    if (curr_state != last_battery_state_[i]) {
       // update the stored state
-      lastStates[i] = currentState;
+      last_battery_state_[i] = curr_state;
 
       // only send packet if change in state has occured
-      sendBatteryPacket(i, currentState);
+      sendBatteryPacket(i, curr_state);
       delay(config::RS485_LINE_SETTLE_MS);
     }
   }
@@ -187,26 +188,26 @@ void WallBatterySystem::updateCommunication() {
  * @brief Constructs data packet to be sent, then sends it to Toy Car system via
  * RS485
  *
- * @param batteryIndex Index of battery of battery we are sending packet of
+ * @param battery_index Index of battery we are sending packet of
  * @param state Direct reference to the battery's state
  */
-void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
+void WallBatterySystem::sendBatteryPacket(uint8_t battery_index,
                                           const BatteryState &state) {
   WallStatusPacket packet = {0};
   packet.START1 = config::PACKET_START1;
   packet.START2 = config::PACKET_START2;
-  packet.BAT_ID = batteries[batteryIndex].getId();
-  packet.NEG_PRESENT = state.negPresent ? 1 : 0;
-  packet.NEG_STATE = state.negPolarity ? 1 : 0;
-  packet.POS_PRESENT = state.posPresent ? 1 : 0;
-  packet.POS_STATE = state.posPolarity ? 1 : 0;
+  packet.BAT_ID = batteries_[battery_index].getId();
+  packet.NEG_PRESENT = state.neg_present ? 1 : 0;
+  packet.NEG_STATE = state.neg_polarity ? 1 : 0;
+  packet.POS_PRESENT = state.pos_present ? 1 : 0;
+  packet.POS_STATE = state.pos_polarity ? 1 : 0;
   packet.CHK = xorChecksum(packet);
 
   Serial1.write((uint8_t *)&packet, sizeof(WallStatusPacket));
   Serial1.flush();
 
   DEBUG_PRINT("📤 Packet sent for battery ");
-  DEBUG_PRINTLN(batteries[batteryIndex].getName());
+  DEBUG_PRINTLN(batteries_[battery_index].getName());
 
   DEBUG_PRINT("Valid Packet Sent -> BAT:");
   DEBUG_PRINT(packet.BAT_ID);
@@ -224,53 +225,55 @@ void WallBatterySystem::sendBatteryPacket(uint8_t batteryIndex,
  * @brief Controls which LED to light up, if any, based on battery state
  */
 void WallBatterySystem::updateLEDs() {
-  LEDState newState = determineLEDState();
+  LedState new_state = determineLEDState();
 
-  if (newState != lastLEDState) {
-    setLEDState(newState);
+  if (new_state != last_led_state_) {
+    setLEDState(new_state);
 
     // Print status message and battery info
-    switch (newState) {
-    case LED_OFF:
+    switch (new_state) {
+    case LedState::Off:
       DEBUG_PRINTLN("LEDs OFF - waiting for both tags");
       break;
-    case LED_GREEN:
+    case LedState::Green:
       DEBUG_PRINT("✅ ");
-      DEBUG_PRINT(batteries[activeBattery].getName());
+      DEBUG_PRINT(batteries_[active_battery_id_].getName());
       DEBUG_PRINTLN(" battery ready for jumpstart!");
       break;
-    case LED_RED:
+    case LedState::Red:
       DEBUG_PRINT("❌ ");
-      DEBUG_PRINT(batteries[activeBattery].getName());
+      DEBUG_PRINT(batteries_[active_battery_id_].getName());
       DEBUG_PRINTLN(" battery incorrect configuration");
       break;
     }
 
-    if (activeBattery >= 0) {
-      batteries[activeBattery].printBatteryStatus();
+    if (active_battery_id_ >= 0) {
+      batteries_[active_battery_id_].printBatteryStatus();
     }
 
-    lastLEDState = newState;
+    last_led_state_ = new_state;
   }
 
-  currentLEDState = newState;
+  current_led_state_ = new_state;
 }
 
 /*
  * @brief Determines the state of an active battery, if any. An active
  * battery is any battery with tags present on both terminals
  *
- * @return LED state enum
+ * @return Led state enum
  */
-LEDState WallBatterySystem::determineLEDState() {
-  activeBattery = findActiveBattery();
+LedState WallBatterySystem::determineLEDState() {
+  active_battery_id_ = findActiveBattery();
 
-  if (activeBattery < 0) {
-    return LED_OFF; // no active battery found
+  if (active_battery_id_ < 0) {
+    return LedState::Off; // no active battery found
   }
 
   // check if active battery has valid configuration
-  return batteries[activeBattery].hasValidConfiguration() ? LED_GREEN : LED_RED;
+  return batteries_[active_battery_id_].hasValidConfiguration()
+             ? LedState::Green
+             : LedState::Red;
 }
 
 /*
@@ -282,13 +285,13 @@ LEDState WallBatterySystem::determineLEDState() {
 int WallBatterySystem::findActiveBattery() const {
   // find the battery with the most complete configuration
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
-    bool posPresent =
-        (batteries[i].getPositive().getTagState() == TagState::Confirmed);
-    bool negPresent =
-        (batteries[i].getNegative().getTagState() == TagState::Confirmed);
+    bool pos_present =
+        (batteries_[i].getPositive().getTagState() == TagState::Confirmed);
+    bool neg_present =
+        (batteries_[i].getNegative().getTagState() == TagState::Confirmed);
 
-    // prioritize batteries with both terminals connected
-    if (posPresent && negPresent) {
+    // prioritize battery with both terminals connected
+    if (pos_present && neg_present) {
       return i;
     }
   }
@@ -299,17 +302,17 @@ int WallBatterySystem::findActiveBattery() const {
 /*
  * @brief Sets the state of the LED
  */
-void WallBatterySystem::setLEDState(LEDState state) {
+void WallBatterySystem::setLEDState(LedState state) {
   switch (state) {
-  case LED_OFF:
+  case LedState::Off:
     digitalWrite(config::GREEN_LED_PIN, LOW);
     digitalWrite(config::RED_LED_PIN, LOW);
     break;
-  case LED_GREEN:
+  case LedState::Green:
     digitalWrite(config::GREEN_LED_PIN, HIGH);
     digitalWrite(config::RED_LED_PIN, LOW);
     break;
-  case LED_RED:
+  case LedState::Red:
     digitalWrite(config::GREEN_LED_PIN, LOW);
     digitalWrite(config::RED_LED_PIN, HIGH);
     break;
@@ -321,12 +324,12 @@ void WallBatterySystem::setLEDState(LEDState state) {
  */
 void WallBatterySystem::updateSystemHealth() {
   // System is healthy if at least one battery is fully functional
-  systemHealthy = false;
+  system_health_ = false;
 
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
-    if (batteries[i].getPositive().getReaderStatus() &&
-        batteries[i].getNegative().getReaderStatus()) {
-      systemHealthy = true;
+    if (batteries_[i].getPositive().getReaderStatus() &&
+        batteries_[i].getNegative().getReaderStatus()) {
+      system_health_ = true;
       break;
     }
   }
@@ -350,6 +353,6 @@ void WallBatterySystem::handleSystemFailure() const {
  */
 void WallBatterySystem::disableAllMuxChannels() {
   for (int i = 0; i < config::NUM_BATTERIES; i++) {
-    MuxController::disableChannel(batteries[i].getMuxAddr());
+    MuxController::disableChannel(batteries_[i].getMuxAddr());
   }
 }

@@ -16,10 +16,10 @@
 
 class Battery {
 public:
-  Battery(uint8_t muxAddr, uint8_t id)
-      : muxAddr(muxAddr), id(id),
-        negative("Negative", muxAddr, config::NEGATIVE_TERMINAL_CHANNEL),
-        positive("Positive", muxAddr, config::POSITIVE_TERMINAL_CHANNEL) {}
+  Battery(uint8_t mux_addr, uint8_t id)
+      : mux_addr_(mux_addr), id_(id),
+        negative_("Negative", mux_addr, config::NEGATIVE_TERMINAL_CHANNEL),
+        positive_("Positive", mux_addr, config::POSITIVE_TERMINAL_CHANNEL) {}
 
   bool initialize();
   void updateReaders();
@@ -27,16 +27,16 @@ public:
   void printBatteryStatus() const;
   void printInitializationSummary() const;
 
-  const Reader &getPositive() const { return positive; }
-  const Reader &getNegative() const { return negative; }
-  uint8_t getMuxAddr() const { return muxAddr; }
-  uint8_t getId() const { return id; }
+  const Reader &getPositive() const { return positive_; }
+  const Reader &getNegative() const { return negative_; }
+  uint8_t getMuxAddr() const { return mux_addr_; }
+  uint8_t getId() const { return id_; }
   const char *getName() const;
 
 private:
-  bool muxCommunicationOK;
-  uint8_t muxAddr;
-  uint8_t id;
-  Reader positive;
-  Reader negative;
+  bool mux_communication_ok_;
+  uint8_t mux_addr_;
+  uint8_t id_;
+  Reader positive_;
+  Reader negative_;
 };

@@ -14,32 +14,32 @@ bool Battery::initialize() {
   Wire.beginTransmission(getMuxAddr());
   byte result = Wire.endTransmission();
   if (result != 0) {
-    muxCommunicationOK = false;
+    mux_communication_ok_ = false;
     return false;
   } else {
-    muxCommunicationOK = true;
+    mux_communication_ok_ = true;
   }
 
   // ----- Initialize the RFID readers -----
-  positive.init();
-  negative.init();
+  positive_.init();
+  negative_.init();
 
-  if (!positive.getReaderStatus() || !negative.getReaderStatus()) {
+  if (!positive_.getReaderStatus() || !negative_.getReaderStatus()) {
     DEBUG_PRINT("Warning: Battery ");
-    DEBUG_PRINT(id);
+    DEBUG_PRINT(id_);
     DEBUG_PRINTLN(" has failed terminal(s)");
   }
 
   // return true if both readers are working
-  return (positive.getReaderStatus() && negative.getReaderStatus());
+  return (positive_.getReaderStatus() && negative_.getReaderStatus());
 }
 
 /*
  * @brief Updates both positive and negative readers
  */
 void Battery::updateReaders() {
-  positive.update();
-  negative.update();
+  positive_.update();
+  negative_.update();
 }
 
 /*
@@ -50,23 +50,23 @@ void Battery::updateReaders() {
  */
 bool Battery::hasValidConfiguration() const {
   // both terminals must have tags in Confirmed state
-  if (positive.getTagState() != TagState::Confirmed ||
-      negative.getTagState() != TagState::Confirmed)
+  if (positive_.getTagState() != TagState::Confirmed ||
+      negative_.getTagState() != TagState::Confirmed)
     return false;
 
   // both cards must have correct polarity
-  if (strncmp(positive.getTagData().type, "POS", 3) != 0)
+  if (strncmp(positive_.getTagData().type, "POS", 3) != 0)
     return false;
 
-  if (strncmp(negative.getTagData().type, "NEG", 3) != 0)
+  if (strncmp(negative_.getTagData().type, "NEG", 3) != 0)
     return false;
 
   // cable IDs must form valid pair
-  uint8_t posID = positive.getTagData().id;
-  uint8_t negID = negative.getTagData().id;
+  uint8_t pos_id = positive_.getTagData().id;
+  uint8_t neg_id = negative_.getTagData().id;
 
-  return (posID == 1 && negID == 3) || (posID == 2 && negID == 4) ||
-         (posID == 2 && negID == 3) || (posID == 1 && negID == 4);
+  return (pos_id == 1 && neg_id == 3) || (pos_id == 2 && neg_id == 4) ||
+         (pos_id == 2 && neg_id == 3) || (pos_id == 1 && neg_id == 4);
 }
 
 /*
@@ -77,10 +77,10 @@ void Battery::printBatteryStatus() const {
   DEBUG_PRINTLN("--- Configuration Status ---");
 
   DEBUG_PRINT("Positive Terminal: ");
-  positive.printStatus();
+  positive_.printStatus();
 
   DEBUG_PRINT("Negative Terminal: ");
-  negative.printStatus();
+  negative_.printStatus();
 
   DEBUG_PRINTLN("----------------------------");
 }
@@ -92,18 +92,18 @@ void Battery::printBatteryStatus() const {
 void Battery::printInitializationSummary() const {
   DEBUG_PRINT(getName());
   DEBUG_PRINT(" Wall Battery: MUX=");
-  DEBUG_PRINT(muxCommunicationOK ? "OK" : "FAILED");
+  DEBUG_PRINT(mux_communication_ok_ ? "OK" : "FAILED");
   DEBUG_PRINT(", Positive=");
-  DEBUG_PRINT(positive.getReaderStatus() ? "OK" : "FAILED");
+  DEBUG_PRINT(positive_.getReaderStatus() ? "OK" : "FAILED");
   DEBUG_PRINT(", Negative=");
-  DEBUG_PRINTLN(negative.getReaderStatus() ? "OK" : "FAILED");
+  DEBUG_PRINTLN(negative_.getReaderStatus() ? "OK" : "FAILED");
 }
 
 /*
  * @brief Helper function for mapping battery ID to battery type
  */
 const char *Battery::getName() const {
-  switch (id) {
+  switch (id_) {
   case 0:
     return "6V";
   case 1:
