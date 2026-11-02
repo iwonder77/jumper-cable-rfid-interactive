@@ -1,13 +1,13 @@
-/* 
+/*
 ************************************************
-* File: mkrzero-rx.ino
-* Project: Jumper Cable RFID Interactive - MKR Zero (Toy Car) Rx System 
+* File: toy-car.ino
+* Project: Jumper Cable RFID Interactive - MKR Zero (Toy Car) Rx System
 *
 * Author: Isai Sanchez
 * Created: 2025-09
 *
-* Description:  Entry point for software that'll integrate RS-485 receiver + audio player 
-*               + terminal reading + LED logic
+* Description:  Entry point for software that'll integrate RS-485 receiver +
+*               audio player + terminal reading + LED logic
 * Notes:
 *************************************************
 */

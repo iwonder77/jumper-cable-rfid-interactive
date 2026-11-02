@@ -1,27 +1,36 @@
-/** 
-* Interactive: Jumper Cable Toy Car
-* File: leonardo-tx.ino
-* Description: entry point for the Wall Battery system in the Jumper Cable Toy Car interactive  
-*
-* Author: Isai Sanchez 
-* Date: 08-19-2025 
-* Board used: Arduino Leonardo
-* Libraries: 
-*   - MFRC522v2.h (Main RFID library): https://github.com/OSSLibraries/Arduino_MFRC522v2 
-*
-* Notes: 
-*   - The M5Stack RFID2 readers we're using have a WS1850S chip rather than the MFRC522, so there are subtle differences that the library
-*     doesn't play nice with, however reading the datasheet for the MFRC522 and the src code for the library seems to help and work out alright
-*       sidenote: coudln't for the life of me figure out how to download the datasheet for these RFID readers from M5Stack, 
-*       definitely will go with other options if we use RFID again
-*   - Found through trial and error that the RFID2 boards have internal pull-up resistors for the SDA/SCL lines. So these were 
-*     connected straight to the TCA9548A multiplexer's output channels (SD1/SC1 and SD2/SC2) without the use of an external pull up resistor
-*   - Also found out that the SDA/SCL lines for the RFID2 readers are at 3.3V logic level, so the multiplexer was powered with Arduino's
-*     3V3/GND pins, and since the Arduino's SDA/SCL lines are at 5V logic level, a level converter was used to communicate between 
-*     Arduino <---> RFID2 Readers
-*
-* (c) Thanksgiving Point Exhibits Electronics Team — 2025
-*/
+/**
+ * Interactive: Jumper Cable Toy Car
+ * File: wall-batteries.ino
+ * Description: entry point for the Wall Battery system in the Jumper Cable
+ *   Toy Car interactive
+ *
+ * Author: Isai Sanchez
+ * Date: 08-19-2025
+ * Board used: Arduino Leonardo
+ * Libraries:
+ *   - MFRC522v2.h (Main RFID library):
+ *     https://github.com/OSSLibraries/Arduino_MFRC522v2
+ *
+ * Notes:
+ *   - The M5Stack RFID2 readers we're using have a WS1850S chip rather than
+ *     the MFRC522, so there are subtle differences that the library doesn't
+ *     play nice with, however reading the datasheet for the MFRC522 and the
+ *     src code for the library seems to help and work out alright
+ *       sidenote: couldn't for the life of me figure out how to download the
+ *       datasheet for these RFID readers from M5Stack, definitely will go
+ *       with other options if we use RFID again
+ *   - Found through trial and error that the RFID2 boards have internal
+ *     pull-up resistors for the SDA/SCL lines. So these were connected
+ *     straight to the TCA9548A multiplexer's output channels (SD1/SC1 and
+ *     SD2/SC2) without the use of an external pull up resistor
+ *   - Also found out that the SDA/SCL lines for the RFID2 readers are at 3.3V
+ *     logic level, so the multiplexer was powered with Arduino's 3V3/GND
+ *     pins, and since the Arduino's SDA/SCL lines are at 5V logic level, a
+ *     level converter was used to communicate between Arduino <---> RFID2
+ *     Readers
+ *
+ * (c) Thanksgiving Point Exhibits Electronics Team — 2025
+ */
 
 #include <Wire.h>
 #include <avr/wdt.h>
