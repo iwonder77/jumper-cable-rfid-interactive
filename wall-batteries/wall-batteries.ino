@@ -41,7 +41,7 @@
 WallBatterySystem wallSystem;
 
 void setup() {
-  wdt_enable(WDTO_4S);  // 4-second watchdog timeout
+  wdt_enable(WDTO_4S); // 4-second watchdog timeout
   Serial.begin(9600);
   delay(10);
 
@@ -52,7 +52,7 @@ void setup() {
 }
 
 void loop() {
-  wdt_reset();  // pat watchdog (reset timer)
+  wdt_reset(); // pat watchdog (reset timer)
   wallSystem.updateSystem();
   wallSystem.processSystemLogic();
   delay(5);

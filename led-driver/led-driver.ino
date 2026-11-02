@@ -1,19 +1,21 @@
-#include <Wire.h>
-#include "LEDController.h"
 #include "Config.h"
+#include "LEDController.h"
+#include <Wire.h>
 
 LEDController ledController;
 
 volatile uint8_t currentAnimation = 0xFF;
 volatile bool gotNewCommand = false;
 uint8_t animation = 0xFF;
-uint8_t lastPlayedAnimation = 0xFF;  // Track last animation to detect changes
+uint8_t lastPlayedAnimation = 0xFF; // Track last animation to detect changes
 unsigned long animationEndTimestamp = 0;
 
 void receiveEvent(int numBytes) {
-  if (numBytes <= 0) return;
+  if (numBytes <= 0)
+    return;
   uint8_t cmd = Wire.read();
-  if (cmd == config::CMD_6V_ANIMATION || cmd == config::CMD_12V_ANIMATION || cmd == config::CMD_16V_ANIMATION || cmd == config::CMD_WRONG_ANIMATION) {
+  if (cmd == config::CMD_6V_ANIMATION || cmd == config::CMD_12V_ANIMATION ||
+      cmd == config::CMD_16V_ANIMATION || cmd == config::CMD_WRONG_ANIMATION) {
     currentAnimation = cmd;
     gotNewCommand = true;
   } else if (cmd == config::CMD_DEFAULT_ANIMATION) {
@@ -46,7 +48,8 @@ void loop() {
     interrupts();
   }
 
-  // determine which animation to play (default or 6V,12V,16V for specified amnt of time)
+  // determine which animation to play (default or 6V,12V,16V for specified amnt
+  // of time)
   uint8_t activeAnimation;
   if (animationEndTimestamp != 0 && millis() < animationEndTimestamp) {
     // special animation timer is active and has not expired yet
@@ -63,23 +66,23 @@ void loop() {
   if (activeAnimation != lastPlayedAnimation) {
     Serial.print("Animation changed to: ");
     switch (activeAnimation) {
-      case config::CMD_DEFAULT_ANIMATION:
-        Serial.println("DEFAULT");
-        break;
-      case config::CMD_6V_ANIMATION:
-        Serial.println("6V");
-        break;
-      case config::CMD_12V_ANIMATION:
-        Serial.println("12V");
-        break;
-      case config::CMD_16V_ANIMATION:
-        Serial.println("16V");
-        break;
-      default:
-        Serial.print("UNKNOWN (");
-        Serial.print(activeAnimation);
-        Serial.println(")");
-        break;
+    case config::CMD_DEFAULT_ANIMATION:
+      Serial.println("DEFAULT");
+      break;
+    case config::CMD_6V_ANIMATION:
+      Serial.println("6V");
+      break;
+    case config::CMD_12V_ANIMATION:
+      Serial.println("12V");
+      break;
+    case config::CMD_16V_ANIMATION:
+      Serial.println("16V");
+      break;
+    default:
+      Serial.print("UNKNOWN (");
+      Serial.print(activeAnimation);
+      Serial.println(")");
+      break;
     }
     lastPlayedAnimation = activeAnimation;
   }
