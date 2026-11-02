@@ -1,2 +1,11 @@
 default_fqbn: rp2040:rp2040:seeed_xiao_rp2040
-default_port: /dev/cu.usbmodem11401
+default_profile: xiao_rp2040
+
+profiles:
+  xiao_rp2040:
+    fqbn: rp2040:rp2040:seeed_xiao_rp2040
+    platforms:
+      - platform: rp2040:rp2040 (5.5.0)
+        platform_index_url: https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+    libraries:
+      - FastLED (3.10.6)

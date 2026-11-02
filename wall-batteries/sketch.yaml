@@ -1,2 +1,10 @@
 default_fqbn: arduino:avr:leonardo
-default_port: /dev/cu.usbmodem11301
+default_profile: leonardo
+
+profiles:
+  leonardo:
+    fqbn: arduino:avr:leonardo
+    platforms:
+      - platform: arduino:avr (1.8.8)
+    libraries:
+      - RFID_MFRC522v2 (2.0.6)
